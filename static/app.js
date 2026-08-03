@@ -327,6 +327,20 @@ async function loadEmployeesDropdown() {
   }
 }
 
+async function loadActiveCheckoutsDropdown() {
+  try {
+    const records = await apiCall(`/attendance/?record_date=${todayStr()}`);
+    const activeRecords = records.filter(r => !r.check_out);
+    const select = document.getElementById('checkoutRecord');
+    select.innerHTML = '<option value="">Select active check-in...</option>';
+    activeRecords.forEach(r => {
+      select.innerHTML += `<option value="${r.id}">Record #${r.id} (Emp ID: ${r.employee_id}) - In: ${formatTime(r.check_in)}</option>`;
+    });
+  } catch (err) {
+    // Fail silently if date has no records
+  }
+}
+
 async function loadAttendanceRecords(dateFilter = null) {
   try {
     let endpoint = '/attendance/';
@@ -334,6 +348,9 @@ async function loadAttendanceRecords(dateFilter = null) {
 
     const records = await apiCall(endpoint);
     const tbody = document.getElementById('attendanceTableBody');
+
+    // Also update active check-outs dropdown
+    loadActiveCheckoutsDropdown();
 
     if (records.length === 0) {
       tbody.innerHTML = `
@@ -350,15 +367,15 @@ async function loadAttendanceRecords(dateFilter = null) {
     tbody.innerHTML = records.map(r => `
       <tr>
         <td>${r.id}</td>
-        <td>${r.employee_id}</td>
+        <td>Employee #${r.employee_id}</td>
         <td>${formatDate(r.date)}</td>
         <td>${formatTime(r.check_in)}</td>
         <td>${r.check_out ? formatTime(r.check_out) : '<span style="color:var(--text-muted)">—</span>'}</td>
         <td><span class="badge ${r.status}">${r.status}</span></td>
         <td>
           ${!r.check_out
-            ? `<button class="btn btn-secondary btn-sm" onclick="checkOut(${r.id})">Check Out</button>`
-            : '<span style="color:var(--text-muted);font-size:0.8rem;">Done</span>'
+            ? `<button class="btn btn-primary btn-sm" onclick="checkOut(${r.id})">&#128284; Check Out</button>`
+            : '<span style="color:var(--success);font-size:0.8rem;font-weight:600;">✓ Checked Out</span>'
           }
         </td>
       </tr>
@@ -374,7 +391,7 @@ document.getElementById('checkinBtn').addEventListener('click', async () => {
   const status = document.getElementById('checkinStatus').value;
 
   if (!employeeId) {
-    showToast('Please select an employee.', 'error');
+    showToast('Please select an employee to check in.', 'error');
     return;
   }
 
@@ -384,13 +401,26 @@ document.getElementById('checkinBtn').addEventListener('click', async () => {
       body: JSON.stringify({ employee_id: parseInt(employeeId), status }),
     });
     showToast('Checked in successfully!', 'success');
+    document.getElementById('checkinEmployee').value = '';
     loadAttendanceRecords();
   } catch (err) {
     showToast(err.message, 'error');
   }
 });
 
-// Check-out
+// Quick Check-out Dropdown Button
+document.getElementById('checkoutBtn').addEventListener('click', async () => {
+  const recordId = document.getElementById('checkoutRecord').value;
+
+  if (!recordId) {
+    showToast('Please select an active check-in record to check out.', 'error');
+    return;
+  }
+
+  await checkOut(recordId);
+});
+
+// Check-out function
 async function checkOut(recordId) {
   try {
     await apiCall(`/attendance/check-out/${recordId}`, { method: 'POST' });

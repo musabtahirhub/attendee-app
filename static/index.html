@@ -164,15 +164,16 @@
           <p>Record and view attendance</p>
         </div>
 
-        <!-- Check-in Form -->
-        <div class="card" style="margin-bottom: 24px;">
-          <div class="card-header">
-            <h3>Quick Check-in</h3>
-          </div>
-          <div class="card-body">
-            <div class="form-row">
+        <!-- Quick Check-in and Check-out Cards -->
+        <div class="form-row" style="margin-bottom: 24px;">
+          <!-- Check-in Form -->
+          <div class="card">
+            <div class="card-header">
+              <h3>📥 Quick Check-in</h3>
+            </div>
+            <div class="card-body">
               <div class="form-group">
-                <label for="checkinEmployee">Employee</label>
+                <label for="checkinEmployee">Select Employee</label>
                 <select id="checkinEmployee">
                   <option value="">Select employee...</option>
                 </select>
@@ -184,8 +185,26 @@
                   <option value="late">Late</option>
                 </select>
               </div>
+              <button class="btn btn-success" id="checkinBtn" style="width: 100%; justify-content: center;">&#9989; Check In</button>
             </div>
-            <button class="btn btn-success" id="checkinBtn">&#9989; Check In</button>
+          </div>
+
+          <!-- Check-out Form -->
+          <div class="card">
+            <div class="card-header">
+              <h3>📤 Quick Check-out</h3>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label for="checkoutRecord">Active Check-In</label>
+                <select id="checkoutRecord">
+                  <option value="">Select active check-in...</option>
+                </select>
+              </div>
+              <div style="height: 62px; display: flex; align-items: flex-end;">
+                <button class="btn btn-primary" id="checkoutBtn" style="width: 100%; justify-content: center;">&#128284; Check Out</button>
+              </div>
+            </div>
           </div>
         </div>
 
