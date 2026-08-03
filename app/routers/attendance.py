@@ -1,15 +1,3 @@
-"""
-routers/attendance.py
----------------------
-Endpoints for recording and querying employee attendance.
-
-Key operations:
-  • Check-in  — creates a new AttendanceRecord for today.
-  • Check-out — updates an existing record with the check-out timestamp.
-  • Query     — list records with optional date filtering.
-  • Report    — daily summary (present / late / absent counts).
-"""
-
 from datetime import datetime, date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -27,8 +15,7 @@ from app.schemas import (
 router = APIRouter()
 
 
-# ────────────────────────── CHECK-IN ──────────────────────────
-
+# CHECK-IN
 
 @router.post(
     "/check-in",
@@ -37,18 +24,7 @@ router = APIRouter()
     summary="Record employee check-in",
 )
 def check_in(data: AttendanceCheckIn, db: Session = Depends(get_db)):
-    """
-    Record a check-in for an employee.
-
-    - **employee_id**: The ID of the employee checking in (required).
-    - **status**: "present" (default) or "late".
-
-    Business rules:
-    1. The employee must exist.
-    2. An employee can only check in **once per day**. Attempting a second
-       check-in on the same date returns a 400 error.
-    """
-    # 1. Verify employee exists
+    # Verify employee exists
     employee = db.query(Employee).filter(Employee.id == data.employee_id).first()
     if not employee:
         raise HTTPException(
@@ -56,7 +32,7 @@ def check_in(data: AttendanceCheckIn, db: Session = Depends(get_db)):
             detail=f"Employee with id {data.employee_id} not found.",
         )
 
-    # 2. Prevent duplicate check-in for the same day
+    # Prevent duplicate check-in for the same day
     today = date.today()
     existing_record = (
         db.query(AttendanceRecord)
@@ -72,7 +48,7 @@ def check_in(data: AttendanceCheckIn, db: Session = Depends(get_db)):
             detail=f"Employee {data.employee_id} has already checked in today.",
         )
 
-    # 3. Create the attendance record
+    # Create the attendance record
     record = AttendanceRecord(
         employee_id=data.employee_id,
         date=today,
@@ -85,8 +61,7 @@ def check_in(data: AttendanceCheckIn, db: Session = Depends(get_db)):
     return record
 
 
-# ────────────────────────── CHECK-OUT ──────────────────────────
-
+# CHECK-OUT
 
 @router.post(
     "/check-out/{record_id}",
@@ -94,15 +69,6 @@ def check_in(data: AttendanceCheckIn, db: Session = Depends(get_db)):
     summary="Record employee check-out",
 )
 def check_out(record_id: int, db: Session = Depends(get_db)):
-    """
-    Record the check-out time for an existing attendance record.
-
-    - **record_id**: The attendance record ID (path parameter).
-
-    Business rules:
-    1. The attendance record must exist.
-    2. The employee must not have already checked out (check_out is null).
-    """
     record = (
         db.query(AttendanceRecord)
         .filter(AttendanceRecord.id == record_id)
@@ -126,8 +92,7 @@ def check_out(record_id: int, db: Session = Depends(get_db)):
     return record
 
 
-# ────────────────────────── LIST RECORDS ──────────────────────────
-
+# LIST RECORDS
 
 @router.get(
     "/",
@@ -143,12 +108,6 @@ def list_attendance(
     limit: int = 100,
     db: Session = Depends(get_db),
 ):
-    """
-    Retrieve attendance records with optional date filtering and pagination.
-
-    - **record_date**: Filter to a specific date.
-    - **skip** / **limit**: Pagination controls.
-    """
     query = db.query(AttendanceRecord)
 
     if record_date:
@@ -158,8 +117,7 @@ def list_attendance(
     return records
 
 
-# ─────────────────────── RECORDS BY EMPLOYEE ──────────────────────
-
+# RECORDS BY EMPLOYEE
 
 @router.get(
     "/employee/{employee_id}",
@@ -170,12 +128,6 @@ def get_employee_attendance(
     employee_id: int,
     db: Session = Depends(get_db),
 ):
-    """
-    Retrieve all attendance records for a specific employee, ordered by
-    most recent date first.
-
-    Raises **404** if the employee does not exist.
-    """
     employee = db.query(Employee).filter(Employee.id == employee_id).first()
     if not employee:
         raise HTTPException(
@@ -192,8 +144,7 @@ def get_employee_attendance(
     return records
 
 
-# ──────────────────────── DAILY REPORT ────────────────────────
-
+# DAILY REPORT
 
 @router.get(
     "/report",
@@ -207,15 +158,6 @@ def daily_report(
     ),
     db: Session = Depends(get_db),
 ):
-    """
-    Generate a summary report for a given date (defaults to today).
-
-    Returns:
-    - **total_present**: Number of employees with status "present".
-    - **total_late**: Number of employees with status "late".
-    - **total_absent**: Number of employees with status "absent".
-    - **records**: The individual attendance records for that day.
-    """
     if report_date is None:
         report_date = date.today()
 
