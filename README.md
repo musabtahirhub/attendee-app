@@ -36,22 +36,22 @@ uvicorn app.main:app --reload
 ## API Endpoints
 
 ### Employees
-| Method | Endpoint              | Description          |
-|--------|-----------------------|----------------------|
-| POST   | `/employees/`         | Create employee      |
-| GET    | `/employees/`         | List all employees   |
-| GET    | `/employees/{id}`     | Get employee by ID   |
-| PUT    | `/employees/{id}`     | Update employee      |
-| DELETE | `/employees/{id}`     | Delete employee      |
+| Method | Endpoint                  | Description          |
+|--------|---------------------------|----------------------|
+| POST   | `/api/employees/`         | Create employee      |
+| GET    | `/api/employees/`         | List all employees   |
+| GET    | `/api/employees/{id}`     | Get employee by ID   |
+| PUT    | `/api/employees/{id}`     | Update employee      |
+| DELETE | `/api/employees/{id}`     | Delete employee      |
 
 ### Attendance
-| Method | Endpoint                      | Description                |
-|--------|-------------------------------|----------------------------|
-| POST   | `/attendance/check-in`        | Record check-in            |
-| POST   | `/attendance/check-out/{id}`  | Record check-out           |
-| GET    | `/attendance/`                | List records (date filter) |
-| GET    | `/attendance/employee/{id}`   | Records for an employee    |
-| GET    | `/attendance/report`          | Daily summary report       |
+| Method | Endpoint                          | Description                |
+|--------|-----------------------------------|----------------------------|
+| POST   | `/api/attendance/check-in`        | Record check-in            |
+| POST   | `/api/attendance/check-out/{id}`  | Record check-out           |
+| GET    | `/api/attendance/`                | List records (date filter) |
+| GET    | `/api/attendance/employee/{id}`   | Records for an employee    |
+| GET    | `/api/attendance/report`          | Daily summary report       |
 
 ## Deployment
 
@@ -119,6 +119,10 @@ attendance system/
 │       ├── __init__.py
 │       ├── employees.py  # Employee CRUD
 │       └── attendance.py # Attendance endpoints
+├── static/
+│   ├── app.js            # Frontend JavaScript app logic
+│   ├── index.html        # Single-page application UI
+│   └── style.css         # Light-theme styling
 ├── .env.example          # Environment variable template
 ├── .gitignore            # Git ignore rules
 ├── Procfile              # Platform start command
