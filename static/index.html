@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Attendance System — Manage employees and track daily attendance." />
+  <title>Attendance System</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <!-- Toast Notifications -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Mobile Menu Button -->
+  <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle menu">&#9776;</button>
+
+  <div class="app-container">
+
+    <!-- ─── Sidebar ─── -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">&#128203;</div>
+        <div>
+          <h1>Attendee</h1>
+          <div class="brand-subtitle">Attendance System</div>
+        </div>
+      </div>
+
+      <div class="nav-section-label">Menu</div>
+      <ul class="nav-list">
+        <li class="nav-item active" data-tab="dashboard" id="nav-dashboard">
+          <span class="nav-icon">&#9635;</span>
+          Dashboard
+        </li>
+        <li class="nav-item" data-tab="employees" id="nav-employees">
+          <span class="nav-icon">&#128101;</span>
+          Employees
+        </li>
+        <li class="nav-item" data-tab="attendance" id="nav-attendance">
+          <span class="nav-icon">&#9989;</span>
+          Attendance
+        </li>
+      </ul>
+    </aside>
+
+    <!-- ─── Main Content ─── -->
+    <main class="main-content">
+
+      <!-- ════════════════ DASHBOARD TAB ════════════════ -->
+      <div class="tab-content active" id="tab-dashboard">
+        <div class="page-header">
+          <h2>Dashboard</h2>
+          <p>Today's attendance overview</p>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card total">
+            <div class="stat-icon">&#128101;</div>
+            <div class="stat-label">Total Employees</div>
+            <div class="stat-value" id="statTotalEmployees">0</div>
+          </div>
+          <div class="stat-card present">
+            <div class="stat-icon">&#9989;</div>
+            <div class="stat-label">Present Today</div>
+            <div class="stat-value" id="statPresent">0</div>
+          </div>
+          <div class="stat-card late">
+            <div class="stat-icon">&#9200;</div>
+            <div class="stat-label">Late Today</div>
+            <div class="stat-value" id="statLate">0</div>
+          </div>
+          <div class="stat-card absent">
+            <div class="stat-icon">&#10060;</div>
+            <div class="stat-label">Absent Today</div>
+            <div class="stat-value" id="statAbsent">0</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>Today's Attendance Log</h3>
+          </div>
+          <div class="card-body">
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Employee ID</th>
+                    <th>Check In</th>
+                    <th>Check Out</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboardTableBody">
+                  <tr>
+                    <td colspan="4">
+                      <div class="empty-state">
+                        <div class="empty-icon">&#128203;</div>
+                        <h4>No records yet</h4>
+                        <p>Attendance records for today will appear here.</p>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════════════════ EMPLOYEES TAB ════════════════ -->
+      <div class="tab-content" id="tab-employees">
+        <div class="page-header">
+          <h2>Employees</h2>
+          <p>Manage your employee directory</p>
+        </div>
+
+        <div class="toolbar">
+          <div class="search-box">
+            <span class="search-icon">&#128269;</span>
+            <input type="text" id="employeeSearch" placeholder="Search employees..." />
+          </div>
+          <button class="btn btn-primary" id="addEmployeeBtn">
+            &#43; Add Employee
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-body" style="padding: 0;">
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Department</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="employeesTableBody">
+                  <tr>
+                    <td colspan="6">
+                      <div class="empty-state">
+                        <div class="empty-icon">&#128101;</div>
+                        <h4>No employees yet</h4>
+                        <p>Click "Add Employee" to get started.</p>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════════════════ ATTENDANCE TAB ════════════════ -->
+      <div class="tab-content" id="tab-attendance">
+        <div class="page-header">
+          <h2>Attendance</h2>
+          <p>Record and view attendance</p>
+        </div>
+
+        <!-- Check-in Form -->
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="card-header">
+            <h3>Quick Check-in</h3>
+          </div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="checkinEmployee">Employee</label>
+                <select id="checkinEmployee">
+                  <option value="">Select employee...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="checkinStatus">Status</label>
+                <select id="checkinStatus">
+                  <option value="present">Present</option>
+                  <option value="late">Late</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn btn-success" id="checkinBtn">&#9989; Check In</button>
+          </div>
+        </div>
+
+        <!-- Attendance Records -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Attendance Records</h3>
+          </div>
+          <div class="card-body">
+            <div class="date-picker-row">
+              <input type="date" id="attendanceDateFilter" />
+              <button class="btn btn-secondary btn-sm" id="filterAttendanceBtn">Filter</button>
+              <button class="btn btn-secondary btn-sm" id="clearFilterBtn">Show All</button>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Employee ID</th>
+                    <th>Date</th>
+                    <th>Check In</th>
+                    <th>Check Out</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="attendanceTableBody">
+                  <tr>
+                    <td colspan="7">
+                      <div class="empty-state">
+                        <div class="empty-icon">&#9989;</div>
+                        <h4>No attendance records</h4>
+                        <p>Check in an employee to see records here.</p>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ═══ Employee Modal ═══ -->
+  <div class="modal-overlay" id="employeeModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="employeeModalTitle">Add Employee</h3>
+        <button class="btn-icon" id="closeEmployeeModal" aria-label="Close">&#10005;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="employeeEditId" />
+        <div class="form-group">
+          <label for="empName">Full Name</label>
+          <input type="text" id="empName" placeholder="e.g. Hassan Ali" />
+        </div>
+        <div class="form-group">
+          <label for="empEmail">Email Address</label>
+          <input type="email" id="empEmail" placeholder="e.g. hassan@example.com" />
+        </div>
+        <div class="form-group">
+          <label for="empDepartment">Department</label>
+          <input type="text" id="empDepartment" placeholder="e.g. Engineering" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancelEmployeeModal">Cancel</button>
+        <button class="btn btn-primary" id="saveEmployeeBtn">Save Employee</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Delete Confirmation Modal ═══ -->
+  <div class="modal-overlay" id="deleteModal">
+    <div class="modal" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3>Delete Employee</h3>
+        <button class="btn-icon" id="closeDeleteModal" aria-label="Close">&#10005;</button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete <strong id="deleteEmployeeName"></strong>? This will also remove all their attendance records.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancelDeleteModal">Cancel</button>
+        <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -8,14 +8,20 @@ This module:
    version) that populates the auto-generated Swagger / ReDoc documentation.
 2. Registers a **startup event** that creates all database tables if they
    don't already exist (safe to run repeatedly).
-3. Includes the `employees` and `attendance` routers under their respective
-   URL prefixes so all endpoints are properly namespaced.
-4. Exposes a simple root health-check endpoint at `/`.
+3. Includes the `employees` and `attendance` routers under `/api/` prefix
+   so they don't collide with the frontend routes.
+4. Serves the frontend static files (HTML, CSS, JS).
+5. Adds CORS middleware for local development.
 """
 
+import os
+from pathlib import Path
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from app.database import engine, Base
 from app.models import Employee, AttendanceRecord  # noqa: F401 — import so Base knows about them
@@ -56,36 +62,65 @@ app = FastAPI(
     ),
     version="1.0.0",
     lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
 
-# ──────────────────── Register Routers ────────────────────
+# ──────────────────── CORS Middleware ────────────────────
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ──────────────────── Register Routers (under /api) ────────────────────
 
 
 app.include_router(
     employees.router,
-    prefix="/employees",
+    prefix="/api/employees",
     tags=["Employees"],
 )
 
 app.include_router(
     attendance.router,
-    prefix="/attendance",
+    prefix="/api/attendance",
     tags=["Attendance"],
 )
 
 
-# ──────────────────── Root / Health Check ────────────────────
+# ──────────────────── Static Files ────────────────────
+
+# Resolve the static directory relative to the project root
+STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
-@app.get("/", tags=["Health"])
-def root():
+# ──────────────────── Frontend & Health Check ────────────────────
+
+
+@app.get("/api/health", tags=["Health"])
+def health_check():
     """
-    Simple health-check endpoint. Returns a welcome message
-    confirming the API is running.
+    Health-check endpoint. Returns a JSON status confirming the API is running.
     """
     return {
-        "message": "Welcome to the Attendance System API",
-        "docs": "/docs",
+        "status": "healthy",
+        "message": "Attendance System API is running",
         "version": "1.0.0",
     }
+
+
+@app.get("/", tags=["Frontend"], include_in_schema=False)
+def serve_frontend():
+    """
+    Serve the frontend single-page application.
+    """
+    return FileResponse(str(STATIC_DIR / "index.html"))
