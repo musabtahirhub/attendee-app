@@ -1,135 +1,144 @@
-# 📋 Attendance System API
+# 📋 Attendee — Attendance Management System
 
-A RESTful attendance management system built with **FastAPI**, **SQLAlchemy**, and **PostgreSQL**.
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB.svg?style=flat&logo=python&logoColor=white)](https://www.python.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-4169E1.svg?style=flat&logo=postgresql&logoColor=white)](https://www.postgresql.org)
+[![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0+-D71F00.svg?style=flat&logo=sqlalchemy&logoColor=white)](https://www.sqlalchemy.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## Quick Start
+A high-performance, full-stack attendance management system built with **FastAPI**, **SQLAlchemy ORM**, and **PostgreSQL**. Features a RESTful API backend alongside a responsive, light-themed single-page frontend served directly by FastAPI.
 
-### 1. Prerequisites
-- Python 3.10+
-- PostgreSQL running locally (or a remote instance)
+---
 
-### 2. Create the Database
-```sql
-CREATE DATABASE attendance_db;
+## ✨ Features
+
+- 👥 **Employee Directory Management**: Complete CRUD operations (Create, Read, Update, Delete) with duplicate email prevention and automatic cascade cleanups.
+- ⏱️ **Daily Check-In & Check-Out**: Automated time recording with guards against duplicate same-day check-ins and invalid double check-outs.
+- 📊 **Real-Time Attendance Summaries**: Automated daily report aggregation categorising employee statuses into *Present*, *Late*, and *Absent*.
+- 🎨 **Built-In Responsive Frontend**: Modern, light-themed Single Page Application (SPA) built with vanilla HTML5, CSS3, and JavaScript—zero extra frontend server required.
+- 📖 **Interactive API Documentation**: Auto-generated OpenAPI (Swagger UI) and ReDoc interfaces available out of the box.
+- ☁️ **Cloud Deployment Ready**: Out-of-the-box configuration with `Procfile`, environment variable management (`python-dotenv`), and static file mounting.
+
+---
+
+## 🛠️ Tech Stack
+
+| Domain | Technology | Description |
+|---|---|---|
+| **Backend Framework** | [FastAPI](https://fastapi.tiangolo.com/) | Asynchronous, high-performance Python web framework |
+| **Database ORM** | [SQLAlchemy](https://www.sqlalchemy.org/) | Declarative relational mapping with connection pooling |
+| **Database** | [PostgreSQL](https://www.postgresql.org/) | Enterprise relational database management system |
+| **Data Validation** | [Pydantic v2](https://docs.pydantic.dev/) | Strict data parsing and model validation |
+| **ASGI Server** | [Uvicorn](https://www.uvicorn.org/) | High-performance ASGI server implementation |
+| **Frontend** | HTML5 / CSS3 / JavaScript | Responsive SPA with light glassmorphism aesthetics |
+
+---
+
+## 📁 Repository Structure
+
+```
+attendee-app/
+├── app/
+│   ├── __init__.py          # Package initialization
+│   ├── main.py              # Application entry point & middleware
+│   ├── config.py            # Environment-driven database configuration
+│   ├── database.py          # SQLAlchemy engine, session factory & dependencies
+│   ├── models.py            # SQLAlchemy database models (Employee, AttendanceRecord)
+│   ├── schemas.py           # Pydantic validation & serialization schemas
+│   └── routers/
+│       ├── __init__.py      # Router package init
+│       ├── employees.py     # Employee management endpoints (/api/employees)
+│       └── attendance.py    # Check-in, check-out & report endpoints (/api/attendance)
+├── static/
+│   ├── index.html           # Single Page Application UI
+│   ├── style.css            # Light theme design tokens & layout
+│   └── app.js               # Async API client & dynamic UI logic
+├── .env.example             # Template for environment configuration
+├── .gitignore               # Ignored runtime & build artifacts
+├── Procfile                 # Process configuration for cloud platforms (Render/Railway)
+├── requirements.txt         # Production dependencies
+└── README.md                # System documentation
 ```
 
-### 3. Install Dependencies
+---
+
+## ⚙️ Configuration & Environment Variables
+
+The application reads configuration parameters from environment variables or a local `.env` file via `python-dotenv`.
+
+| Variable | Required | Default Value | Description |
+|---|---|---|---|
+| `DATABASE_URL` | No | `postgresql://postgres:postgres@localhost:5432/attendance_db` | PostgreSQL connection string |
+| `PORT` | No | `8000` | Port for Uvicorn server |
+
+---
+
+## 🚀 Quickstart
+
+### Prerequisites
+- Python 3.10+
+- PostgreSQL server running locally or remotely
+
+### 1. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure Database URL (optional)
-Create a `.env` file in the project root:
-```
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/attendance_db
+### 2. Configure Environment
+Copy `.env.example` to `.env` and set your PostgreSQL connection string:
+```bash
+cp .env.example .env
 ```
 
-### 5. Run the Server
+### 3. Run Development Server
 ```bash
 uvicorn app.main:app --reload
 ```
 
-### 6. Open the Docs
-- Swagger UI: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-- ReDoc: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
+- **Web Application UI**: `http://127.0.0.1:8000/`
+- **Swagger Documentation**: `http://127.0.0.1:8000/docs`
+- **ReDoc Specifications**: `http://127.0.0.1:8000/redoc`
 
-## API Endpoints
+---
 
-### Employees
-| Method | Endpoint                  | Description          |
-|--------|---------------------------|----------------------|
-| POST   | `/api/employees/`         | Create employee      |
-| GET    | `/api/employees/`         | List all employees   |
-| GET    | `/api/employees/{id}`     | Get employee by ID   |
-| PUT    | `/api/employees/{id}`     | Update employee      |
-| DELETE | `/api/employees/{id}`     | Delete employee      |
+## 🔌 API Overview
 
-### Attendance
-| Method | Endpoint                          | Description                |
-|--------|-----------------------------------|----------------------------|
-| POST   | `/api/attendance/check-in`        | Record check-in            |
-| POST   | `/api/attendance/check-out/{id}`  | Record check-out           |
-| GET    | `/api/attendance/`                | List records (date filter) |
-| GET    | `/api/attendance/employee/{id}`   | Records for an employee    |
-| GET    | `/api/attendance/report`          | Daily summary report       |
+All API endpoints are prefixed with `/api`.
 
-## Deployment
+### Employees Endpoint (`/api/employees`)
+- `POST /api/employees/` — Register a new employee
+- `GET /api/employees/` — List all registered employees (supports pagination)
+- `GET /api/employees/{id}` — Fetch details for a specific employee
+- `PUT /api/employees/{id}` — Update an existing employee's details
+- `DELETE /api/employees/{id}` — Delete employee and cascade-delete attendance history
 
-### Deploy to Render (Free)
+### Attendance Endpoint (`/api/attendance`)
+- `POST /api/attendance/check-in` — Record daily check-in for an employee
+- `POST /api/attendance/check-out/{record_id}` — Record check-out timestamp
+- `GET /api/attendance/` — Retrieve attendance logs (supports date filtering)
+- `GET /api/attendance/employee/{employee_id}` — Retrieve attendance log for a specific employee
+- `GET /api/attendance/report` — Fetch daily summary metrics (*present*, *late*, *absent*)
 
-1. **Push to GitHub**
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git remote add origin https://github.com/YOUR_USERNAME/attendance-system.git
-   git push -u origin main
-   ```
+---
 
-2. **Create a PostgreSQL database on Render**
-   - Go to [render.com](https://render.com) → New → PostgreSQL
-   - Copy the **Internal Database URL**
+## ☁️ Deployment
 
-3. **Create a Web Service on Render**
-   - New → Web Service → connect your GitHub repo
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-   - Add env variable: `DATABASE_URL` = *(paste the Internal Database URL)*
-   - Click **Deploy**
+### Render / Railway (PaaS)
+1. Connect repository `musabtahirhub/attendee-app`.
+2. Provision a **PostgreSQL** database instance.
+3. Configure Environment Variable:
+   - `DATABASE_URL` = `<your_postgres_connection_string>`
+4. Build Command: `pip install -r requirements.txt`
+5. Start Command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 
-4. Your API is live at `https://your-app.onrender.com/docs`
-
-### Deploy to Railway
-
-1. Push code to GitHub
-2. Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub
-3. Add a **PostgreSQL** plugin (one click)
-4. Set start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-5. Railway auto-injects `DATABASE_URL` — deploy!
-
-### Deploy to a VPS (DigitalOcean / AWS / Linode)
-
+### VPS (Ubuntu/Debian)
+Run behind Gunicorn and Nginx:
 ```bash
-# On your server:
-sudo apt update && sudo apt install postgresql python3-pip python3-venv
-git clone <your-repo> && cd attendance-system
-python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt gunicorn
-
-# Create the database:
-sudo -u postgres psql -c "CREATE DATABASE attendance_db;"
-
-# Run in production:
 gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
 ```
 
-Use **Nginx** as a reverse proxy and **systemd** to keep it running.
+---
 
-## Project Structure
-```
-attendance system/
-├── app/
-│   ├── __init__.py
-│   ├── main.py          # FastAPI application
-│   ├── config.py         # Configuration
-│   ├── database.py       # SQLAlchemy setup
-│   ├── models.py         # ORM models
-│   ├── schemas.py        # Pydantic schemas
-│   └── routers/
-│       ├── __init__.py
-│       ├── employees.py  # Employee CRUD
-│       └── attendance.py # Attendance endpoints
-├── static/
-│   ├── app.js            # Frontend JavaScript app logic
-│   ├── index.html        # Single-page application UI
-│   └── style.css         # Light-theme styling
-├── .env.example          # Environment variable template
-├── .gitignore            # Git ignore rules
-├── Procfile              # Platform start command
-├── requirements.txt      # Python dependencies
-├── DOCUMENTATION.md      # Full documentation
-└── README.md
-```
+## 📄 License
 
-## License
-MIT
+This project is open-source software licensed under the [MIT License](LICENSE).

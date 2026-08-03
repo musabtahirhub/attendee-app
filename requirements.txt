@@ -3,6 +3,3 @@ uvicorn[standard]
 sqlalchemy
 psycopg2-binary
 python-dotenv
-streamlit
-requests
-pandas
