@@ -42,7 +42,6 @@ app = FastAPI(
 )
 
 
-# ──────────────────── Global Exception Handlers ────────────────────
 
 
 @app.exception_handler(SQLAlchemyError)
@@ -77,7 +76,7 @@ async def generic_exception_handler(request: Request, exc: Exception):
     )
 
 
-# ──────────────────── Middleware ────────────────────
+
 
 
 app.add_middleware(
@@ -115,8 +114,6 @@ async def log_requests(request: Request, call_next):
     return response
 
 
-# ──────────────────── Routers ────────────────────
-
 
 app.include_router(
     employees.router,
@@ -130,8 +127,6 @@ app.include_router(
     tags=["Attendance"],
 )
 
-
-# ──────────────────── Static Files & Frontend ────────────────────
 
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
