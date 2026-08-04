@@ -39,12 +39,14 @@ def run_chatbot_agent(user_message: str, user_role: str) -> str:
         f"Always provide polite, concise, and accurate responses."
     )
 
-    models_to_try = ["gemini-2.0-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash"]
+    # Primary fast model first, followed by stable fallbacks.
+    models_to_try = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.0-flash-lite"]
     last_exception = None
 
     for model_name in models_to_try:
         try:
-            llm = ChatGoogleGenerativeAI(model=model_name, temperature=0)
+            # Set max_retries=1 so rate limits immediately fall back to the next model rather than waiting for 30s exponential backoffs
+            llm = ChatGoogleGenerativeAI(model=model_name, temperature=0, max_retries=1)
             llm_with_tools = llm.bind_tools(tools)
 
             messages = [
@@ -74,7 +76,7 @@ def run_chatbot_agent(user_message: str, user_role: str) -> str:
             err_str = str(e)
             logger.warning("Model '%s' failed: %s", model_name, err_str)
             last_exception = e
-            if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str:
+            if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str or "NOT_FOUND" in err_str or "404" in err_str:
                 continue
             else:
                 raise e
