@@ -8,3 +8,8 @@ DATABASE_URL: str = os.getenv(
     "DATABASE_URL",
     "postgresql://postgres:postgres@localhost:5432/attendance_db",
 )
+
+# Render database URLs start with `postgres://`, but SQLAlchemy requires `postgresql://`
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
