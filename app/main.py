@@ -9,8 +9,8 @@ from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.database import engine, Base
-from app.models import Employee, AttendanceRecord
-from app.routers import employees, attendance
+from app.models import Employee, AttendanceRecord, LeaveRequest
+from app.routers import employees, attendance, chatbot
 from app.logger import get_logger
 
 logger = get_logger(__name__)
@@ -32,16 +32,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Attendance System API",
     description=(
-        "A RESTful API for managing employee attendance. "
-        "Built with FastAPI, SQLAlchemy, and PostgreSQL."
+        "A RESTful API for managing employee attendance and leave. "
+        "Built with FastAPI, SQLAlchemy, PostgreSQL, and LangChain."
     ),
     version="1.0.0",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
 )
-
-
 
 
 @app.exception_handler(SQLAlchemyError)
@@ -74,9 +72,6 @@ async def generic_exception_handler(request: Request, exc: Exception):
             "detail": "An unexpected error occurred. Please try again later.",
         },
     )
-
-
-
 
 
 app.add_middleware(
@@ -114,7 +109,6 @@ async def log_requests(request: Request, call_next):
     return response
 
 
-
 app.include_router(
     employees.router,
     prefix="/api/employees",
@@ -127,6 +121,11 @@ app.include_router(
     tags=["Attendance"],
 )
 
+app.include_router(
+    chatbot.router,
+    prefix="/api/chatbot",
+    tags=["Chatbot"],
+)
 
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
@@ -147,4 +146,3 @@ def health_check():
 @app.get("/", tags=["Frontend"], include_in_schema=False)
 def serve_frontend():
     return FileResponse(str(STATIC_DIR / "index.html"))
-

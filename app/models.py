@@ -26,6 +26,11 @@ class Employee(Base):
         back_populates="employee",
         cascade="all, delete-orphan",
     )
+    leave_requests = relationship(
+        "LeaveRequest",
+        back_populates="employee",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         return f"<Employee(id={self.id}, name='{self.name}', email='{self.email}')>"
@@ -48,4 +53,25 @@ class AttendanceRecord(Base):
         return (
             f"<AttendanceRecord(id={self.id}, employee_id={self.employee_id}, "
             f"date={self.date}, status='{self.status}')>"
+        )
+
+class LeaveRequest(Base):
+    __tablename__ = "leave_requests"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    employee_id = Column(
+        Integer, ForeignKey("employees.id"), nullable=False, index=True
+    )
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+    reason = Column(String(500), nullable=False)
+    status = Column(String(20), nullable=False, default="pending")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    employee = relationship("Employee", back_populates="leave_requests")
+
+    def __repr__(self) -> str:
+        return (
+            f"<LeaveRequest(id={self.id}, employee_id={self.employee_id}, "
+            f"status='{self.status}')>"
         )
