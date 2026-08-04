@@ -36,7 +36,8 @@ def run_chatbot_agent(user_message: str, user_role: str) -> str:
     system_prompt = (
         f"You are an AI Assistant for the Employee Attendance & Leave Management System.\n"
         f"The current user interacting with you has the role: '{user_role}'.\n"
-        f"You have access to tools for checking employee status, applying for leave, and approving leave requests.\n"
+        f"You have access to tools for checking employee status (by ID or Name), applying for leave, and approving leave requests.\n"
+        f"When invoking `check_employee_status`, pass the employee ID (e.g. '1') or Name.\n"
         f"When invoking `approve_employee_leave`, pass user_role='{user_role}'.\n"
         f"Always provide polite, concise, and accurate responses."
     )
@@ -84,9 +85,14 @@ def chatbot_query(payload: ChatRequest):
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="A database error occurred while processing your chatbot request. Please try again later.",
         )
-    except Exception:
-        logger.exception("Unexpected error during chatbot query processing")
+    except Exception as e:
+        logger.exception("Unexpected error during chatbot query processing: %s", str(e))
+        err_msg = str(e)
+        if "API_KEY" in err_msg.upper() or "INVALID" in err_msg.upper() or "AUTHENTICATION" in err_msg.upper():
+            detail_msg = "Invalid Gemini API Key in .env. Please add a valid GOOGLE_API_KEY from https://aistudio.google.com/."
+        else:
+            detail_msg = f"Chatbot error: {err_msg}"
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while processing your chatbot request.",
+            detail=detail_msg,
         )

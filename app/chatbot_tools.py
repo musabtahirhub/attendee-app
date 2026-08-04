@@ -1,4 +1,5 @@
 from datetime import datetime, date
+import re
 from typing import Optional
 from langchain_core.tools import tool
 
@@ -9,15 +10,35 @@ from app.logger import get_logger
 logger = get_logger(__name__)
 
 
+def find_employee(db, query: str):
+    """Helper to find an employee by ID or Name."""
+    query = str(query).strip()
+
+    # Check if query contains an ID like '1', 'ID 1', '#1', 'employee 1'
+    if query.isdigit():
+        emp = queries.get_employee_by_id(db, int(query))
+        if emp:
+            return emp
+
+    id_match = re.search(r'\b(\d+)\b', query)
+    if id_match and any(keyword in query.lower() for keyword in ['id', 'employee', '#']):
+        emp = queries.get_employee_by_id(db, int(id_match.group(1)))
+        if emp:
+            return emp
+
+    # Fallback to name search
+    return queries.get_employee_by_name(db, query)
+
+
 @tool
-def check_employee_status(employee_name: str) -> str:
-    """Checks an employee's attendance status or approved leave for today given their full or partial name."""
-    logger.info("Tool check_employee_status called for name='%s'", employee_name)
+def check_employee_status(employee_query: str) -> str:
+    """Checks an employee's attendance status or approved leave for today given their Employee ID or Name (e.g. '1', 'ID 1', or 'Hassan Ali')."""
+    logger.info("Tool check_employee_status called for query='%s'", employee_query)
     db = SessionLocal()
     try:
-        employee = queries.get_employee_by_name(db, employee_name)
+        employee = find_employee(db, employee_query)
         if not employee:
-            return f"Employee matching name '{employee_name}' was not found."
+            return f"Employee matching '{employee_query}' (by ID or Name) was not found."
 
         today = date.today()
         att_record = queries.get_attendance_by_employee_and_date(db, employee.id, today)
@@ -47,14 +68,14 @@ def check_employee_status(employee_name: str) -> str:
 
 
 @tool
-def apply_employee_leave(employee_name: str, start_date: str, end_date: str, reason: str) -> str:
-    """Submits a leave request for an employee. Dates must be formatted as YYYY-MM-DD."""
-    logger.info("Tool apply_employee_leave called for name='%s', dates=%s to %s", employee_name, start_date, end_date)
+def apply_employee_leave(employee_query: str, start_date: str, end_date: str, reason: str) -> str:
+    """Submits a leave request for an employee by Employee ID or Name. Dates must be formatted as YYYY-MM-DD."""
+    logger.info("Tool apply_employee_leave called for query='%s', dates=%s to %s", employee_query, start_date, end_date)
     db = SessionLocal()
     try:
-        employee = queries.get_employee_by_name(db, employee_name)
+        employee = find_employee(db, employee_query)
         if not employee:
-            return f"Employee matching name '{employee_name}' was not found."
+            return f"Employee matching '{employee_query}' (by ID or Name) was not found."
 
         try:
             start_d = datetime.strptime(start_date, "%Y-%m-%d").date()
@@ -73,7 +94,7 @@ def apply_employee_leave(employee_name: str, start_date: str, end_date: str, rea
             reason=reason,
         )
         return (
-            f"Leave request created successfully for {employee.name}! "
+            f"Leave request created successfully for {employee.name} (ID: {employee.id})! "
             f"Leave ID: {leave_req.id}, Duration: {start_date} to {end_date}, Status: {leave_req.status}."
         )
     except Exception as e:
