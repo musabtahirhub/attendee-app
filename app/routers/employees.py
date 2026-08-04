@@ -13,6 +13,9 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Employee
 from app.schemas import EmployeeCreate, EmployeeUpdate, EmployeeResponse
+from app.logger import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -39,6 +42,7 @@ def create_employee(employee: EmployeeCreate, db: Session = Depends(get_db)):
     # Check for duplicate email
     existing = db.query(Employee).filter(Employee.email == employee.email).first()
     if existing:
+        logger.warning("Duplicate email rejected: %s", employee.email)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"An employee with email '{employee.email}' already exists.",
@@ -53,6 +57,7 @@ def create_employee(employee: EmployeeCreate, db: Session = Depends(get_db)):
     db.add(db_employee)   # Stage the INSERT
     db.commit()           # Execute the INSERT
     db.refresh(db_employee)  # Reload to get DB-generated values (id, created_at)
+    logger.info("Employee created: id=%s name='%s' email='%s'", db_employee.id, db_employee.name, db_employee.email)
     return db_employee
 
 
@@ -76,6 +81,7 @@ def list_employees(
     - **limit**: Maximum number of records to return (default 100).
     """
     employees = db.query(Employee).offset(skip).limit(limit).all()
+    logger.debug("Listed %d employees (skip=%d, limit=%d)", len(employees), skip, limit)
     return employees
 
 
@@ -95,6 +101,7 @@ def get_employee(employee_id: int, db: Session = Depends(get_db)):
     """
     employee = db.query(Employee).filter(Employee.id == employee_id).first()
     if not employee:
+        logger.warning("Employee not found: id=%s", employee_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Employee with id {employee_id} not found.",
@@ -125,6 +132,7 @@ def update_employee(
     """
     employee = db.query(Employee).filter(Employee.id == employee_id).first()
     if not employee:
+        logger.warning("Update failed — employee not found: id=%s", employee_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Employee with id {employee_id} not found.",
@@ -137,6 +145,7 @@ def update_employee(
 
     db.commit()
     db.refresh(employee)
+    logger.info("Employee updated: id=%s fields=%s", employee_id, list(update_data.keys()))
     return employee
 
 
@@ -157,6 +166,7 @@ def delete_employee(employee_id: int, db: Session = Depends(get_db)):
     """
     employee = db.query(Employee).filter(Employee.id == employee_id).first()
     if not employee:
+        logger.warning("Delete failed — employee not found: id=%s", employee_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Employee with id {employee_id} not found.",
@@ -164,4 +174,5 @@ def delete_employee(employee_id: int, db: Session = Depends(get_db)):
 
     db.delete(employee)
     db.commit()
+    logger.info("Employee deleted: id=%s", employee_id)
     return None  # 204 No Content — no body returned

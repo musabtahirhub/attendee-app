@@ -1,8 +1,9 @@
 import os
+import time
 from pathlib import Path
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -10,6 +11,9 @@ from fastapi.responses import FileResponse
 from app.database import engine, Base
 from app.models import Employee, AttendanceRecord  # noqa: F401
 from app.routers import employees, attendance
+from app.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 # Lifespan (startup / shutdown)
@@ -18,10 +22,10 @@ from app.routers import employees, attendance
 async def lifespan(app: FastAPI):
     # STARTUP
     Base.metadata.create_all(bind=engine)
-    print("[OK] Database tables created / verified.")
+    logger.info("Database tables created / verified.")
     yield
     # SHUTDOWN
-    print("[INFO] Application shutting down.")
+    logger.info("Application shutting down.")
 
 
 # Application Instance
@@ -48,6 +52,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Request Logging Middleware
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = time.perf_counter()
+    response = await call_next(request)
+    duration_ms = (time.perf_counter() - start) * 1000
+
+    logger.info(
+        "%s %s -> %s (%.1fms)",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+    )
+    return response
 
 
 # Register Routers (under /api)

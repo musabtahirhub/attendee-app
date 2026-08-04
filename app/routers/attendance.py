@@ -11,6 +11,9 @@ from app.schemas import (
     AttendanceWithEmployee,
     DailyReportResponse,
 )
+from app.logger import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -27,6 +30,7 @@ def check_in(data: AttendanceCheckIn, db: Session = Depends(get_db)):
     # Verify employee exists
     employee = db.query(Employee).filter(Employee.id == data.employee_id).first()
     if not employee:
+        logger.warning("Check-in failed — employee not found: id=%s", data.employee_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Employee with id {data.employee_id} not found.",
@@ -43,6 +47,7 @@ def check_in(data: AttendanceCheckIn, db: Session = Depends(get_db)):
         .first()
     )
     if existing_record:
+        logger.warning("Duplicate check-in rejected: employee_id=%s date=%s", data.employee_id, today)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Employee {data.employee_id} has already checked in today.",
@@ -58,6 +63,7 @@ def check_in(data: AttendanceCheckIn, db: Session = Depends(get_db)):
     db.add(record)
     db.commit()
     db.refresh(record)
+    logger.info("Check-in recorded: record_id=%s employee_id=%s status='%s'", record.id, record.employee_id, record.status)
     return record
 
 
@@ -75,12 +81,14 @@ def check_out(record_id: int, db: Session = Depends(get_db)):
         .first()
     )
     if not record:
+        logger.warning("Check-out failed — record not found: id=%s", record_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Attendance record with id {record_id} not found.",
         )
 
     if record.check_out is not None:
+        logger.warning("Duplicate check-out rejected: record_id=%s", record_id)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Employee has already checked out for this record.",
@@ -89,6 +97,7 @@ def check_out(record_id: int, db: Session = Depends(get_db)):
     record.check_out = datetime.utcnow()
     db.commit()
     db.refresh(record)
+    logger.info("Check-out recorded: record_id=%s employee_id=%s", record.id, record.employee_id)
     return record
 
 
@@ -114,6 +123,7 @@ def list_attendance(
         query = query.filter(AttendanceRecord.date == record_date)
 
     records = query.offset(skip).limit(limit).all()
+    logger.debug("Listed %d attendance records (date=%s, skip=%d, limit=%d)", len(records), record_date, skip, limit)
     return records
 
 
@@ -130,6 +140,7 @@ def get_employee_attendance(
 ):
     employee = db.query(Employee).filter(Employee.id == employee_id).first()
     if not employee:
+        logger.warning("Attendance lookup failed — employee not found: id=%s", employee_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Employee with id {employee_id} not found.",
@@ -141,6 +152,7 @@ def get_employee_attendance(
         .order_by(AttendanceRecord.date.desc())
         .all()
     )
+    logger.debug("Retrieved %d attendance records for employee_id=%s", len(records), employee_id)
     return records
 
 
