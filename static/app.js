@@ -478,7 +478,107 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ═══════════════════════════════════════════════════════════
+// AI Chatbot
+// ═══════════════════════════════════════════════════════════
+
+const chatForm = document.getElementById('chatForm');
+const chatInput = document.getElementById('chatInput');
+const chatHistory = document.getElementById('chatHistory');
+const chatUserRole = document.getElementById('chatUserRole');
+
+if (chatForm) {
+  chatForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const userMsg = chatInput.value.trim();
+    if (!userMsg) return;
+
+    const userRole = chatUserRole ? chatUserRole.value : 'employee';
+
+    appendChatMessage('user', userMsg);
+    chatInput.value = '';
+
+    const loadingId = appendChatLoading();
+
+    try {
+      const res = await apiCall('/chatbot/query', {
+        method: 'POST',
+        body: JSON.stringify({ message: userMsg, user_role: userRole }),
+      });
+      removeChatLoading(loadingId);
+      appendChatMessage('assistant', res.response);
+    } catch (err) {
+      removeChatLoading(loadingId);
+      appendChatMessage('assistant', `⚠️ Error: ${err.message}`);
+    }
+  });
+}
+
+function appendChatMessage(sender, text) {
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `chat-message ${sender}`;
+
+  if (sender === 'user') {
+    msgDiv.style.cssText = `
+      background: var(--accent);
+      color: white;
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      max-width: 80%;
+      align-self: flex-end;
+      box-shadow: var(--shadow-sm);
+      font-size: 0.88rem;
+      line-height: 1.5;
+    `;
+    msgDiv.textContent = text;
+  } else {
+    msgDiv.style.cssText = `
+      background: var(--bg-card);
+      color: var(--text-primary);
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      max-width: 85%;
+      align-self: flex-start;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      font-size: 0.88rem;
+      line-height: 1.5;
+    `;
+    msgDiv.innerHTML = escapeHtml(text).replace(/\n/g, '<br/>');
+  }
+
+  chatHistory.appendChild(msgDiv);
+  chatHistory.scrollTop = chatHistory.scrollHeight;
+}
+
+function appendChatLoading() {
+  const loadingDiv = document.createElement('div');
+  const id = 'loading-' + Date.now();
+  loadingDiv.id = id;
+  loadingDiv.className = 'chat-message assistant';
+  loadingDiv.style.cssText = `
+    background: var(--bg-card);
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    max-width: 85%;
+    align-self: flex-start;
+    border: 1px solid var(--border);
+    font-size: 0.88rem;
+    color: var(--text-muted);
+  `;
+  loadingDiv.innerHTML = '<span class="spinner"></span> Thinking...';
+  chatHistory.appendChild(loadingDiv);
+  chatHistory.scrollTop = chatHistory.scrollHeight;
+  return id;
+}
+
+function removeChatLoading(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+// ═══════════════════════════════════════════════════════════
 // Initial Load
 // ═══════════════════════════════════════════════════════════
 
 loadDashboard();
+
