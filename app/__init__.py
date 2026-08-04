@@ -1,1 +1,1 @@
-
+# Attendance System FastAPI Application

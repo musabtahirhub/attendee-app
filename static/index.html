@@ -9,12 +9,15 @@
 </head>
 <body>
 
+  <!-- Toast Notifications -->
   <div class="toast-container" id="toastContainer"></div>
 
+  <!-- Mobile Menu Button -->
   <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle menu">&#9776;</button>
 
   <div class="app-container">
 
+    <!-- ─── Sidebar ─── -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-brand">
         <div class="brand-icon">&#128203;</div>
@@ -41,8 +44,10 @@
       </ul>
     </aside>
 
+    <!-- ─── Main Content ─── -->
     <main class="main-content">
 
+      <!-- ════════════════ DASHBOARD TAB ════════════════ -->
       <div class="tab-content active" id="tab-dashboard">
         <div class="page-header">
           <h2>Dashboard</h2>
@@ -104,6 +109,7 @@
         </div>
       </div>
 
+      <!-- ════════════════ EMPLOYEES TAB ════════════════ -->
       <div class="tab-content" id="tab-employees">
         <div class="page-header">
           <h2>Employees</h2>
@@ -151,14 +157,16 @@
         </div>
       </div>
 
+      <!-- ════════════════ ATTENDANCE TAB ════════════════ -->
       <div class="tab-content" id="tab-attendance">
         <div class="page-header">
           <h2>Attendance</h2>
           <p>Record and view attendance</p>
         </div>
 
+        <!-- Quick Check-in and Check-out Cards -->
         <div class="form-row" style="margin-bottom: 24px;">
-          
+          <!-- Check-in Form -->
           <div class="card">
             <div class="card-header">
               <h3>📥 Quick Check-in</h3>
@@ -181,6 +189,7 @@
             </div>
           </div>
 
+          <!-- Check-out Form -->
           <div class="card">
             <div class="card-header">
               <h3>📤 Quick Check-out</h3>
@@ -199,6 +208,7 @@
           </div>
         </div>
 
+        <!-- Attendance Records -->
         <div class="card">
           <div class="card-header">
             <h3>Attendance Records</h3>
@@ -242,6 +252,7 @@
     </main>
   </div>
 
+  <!-- ═══ Employee Modal ═══ -->
   <div class="modal-overlay" id="employeeModal">
     <div class="modal">
       <div class="modal-header">
@@ -270,6 +281,7 @@
     </div>
   </div>
 
+  <!-- ═══ Delete Confirmation Modal ═══ -->
   <div class="modal-overlay" id="deleteModal">
     <div class="modal" style="max-width: 400px;">
       <div class="modal-header">

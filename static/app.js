@@ -1,7 +1,23 @@
+/**
+ * app.js
+ * ------
+ * Frontend JavaScript for the Attendance System.
+ * Handles tab navigation, API calls, CRUD operations, and UI updates.
+ */
 
+// ═══════════════════════════════════════════════════════════
+// Configuration
+// ═══════════════════════════════════════════════════════════
 
 const API_BASE = '/api';
 
+// ═══════════════════════════════════════════════════════════
+// Utility Functions
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Wrapper around fetch that auto-parses JSON and handles errors.
+ */
 async function apiCall(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
   const defaultHeaders = { 'Content-Type': 'application/json' };
@@ -13,7 +29,7 @@ async function apiCall(endpoint, options = {}) {
   try {
     const response = await fetch(url, config);
 
-    if (response.status === 204) return null;
+    if (response.status === 204) return null; // No Content
 
     const data = await response.json();
 
@@ -30,6 +46,9 @@ async function apiCall(endpoint, options = {}) {
   }
 }
 
+/**
+ * Show a toast notification.
+ */
 function showToast(message, type = 'info') {
   const container = document.getElementById('toastContainer');
   const toast = document.createElement('div');
@@ -37,24 +56,38 @@ function showToast(message, type = 'info') {
   toast.textContent = message;
   container.appendChild(toast);
 
+  // Remove after animation
   setTimeout(() => toast.remove(), 3000);
 }
 
+/**
+ * Format a datetime string to a readable time.
+ */
 function formatTime(dateStr) {
   if (!dateStr) return '—';
   const d = new Date(dateStr);
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+/**
+ * Format a date string to a readable date.
+ */
 function formatDate(dateStr) {
   if (!dateStr) return '—';
   const d = new Date(dateStr + 'T00:00:00');
   return d.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+/**
+ * Get today's date as YYYY-MM-DD.
+ */
 function todayStr() {
   return new Date().toISOString().split('T')[0];
 }
+
+// ═══════════════════════════════════════════════════════════
+// Tab Navigation
+// ═══════════════════════════════════════════════════════════
 
 const navItems = document.querySelectorAll('.nav-item');
 const tabContents = document.querySelectorAll('.tab-content');
@@ -63,12 +96,15 @@ navItems.forEach(item => {
   item.addEventListener('click', () => {
     const tabId = item.dataset.tab;
 
+    // Update active nav
     navItems.forEach(n => n.classList.remove('active'));
     item.classList.add('active');
 
+    // Show target tab
     tabContents.forEach(t => t.classList.remove('active'));
     document.getElementById(`tab-${tabId}`).classList.add('active');
 
+    // Load data for the tab
     if (tabId === 'dashboard') loadDashboard();
     if (tabId === 'employees') loadEmployees();
     if (tabId === 'attendance') {
@@ -76,24 +112,33 @@ navItems.forEach(item => {
       loadAttendanceRecords();
     }
 
+    // Close mobile sidebar
     document.getElementById('sidebar').classList.remove('open');
   });
 });
 
+// Mobile menu toggle
 document.getElementById('mobileMenuBtn').addEventListener('click', () => {
   document.getElementById('sidebar').classList.toggle('open');
 });
 
+// ═══════════════════════════════════════════════════════════
+// Dashboard
+// ═══════════════════════════════════════════════════════════
+
 async function loadDashboard() {
   try {
+    // Load total employees
     const employees = await apiCall('/employees/');
     document.getElementById('statTotalEmployees').textContent = employees.length;
 
+    // Load today's report
     const report = await apiCall(`/attendance/report?report_date=${todayStr()}`);
     document.getElementById('statPresent').textContent = report.total_present;
     document.getElementById('statLate').textContent = report.total_late;
     document.getElementById('statAbsent').textContent = report.total_absent;
 
+    // Populate table
     const tbody = document.getElementById('dashboardTableBody');
     if (report.records.length === 0) {
       tbody.innerHTML = `
@@ -119,6 +164,10 @@ async function loadDashboard() {
     showToast(err.message, 'error');
   }
 }
+
+// ═══════════════════════════════════════════════════════════
+// Employees
+// ═══════════════════════════════════════════════════════════
 
 let allEmployees = [];
 
@@ -169,6 +218,7 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// Search
 document.getElementById('employeeSearch').addEventListener('input', (e) => {
   const q = e.target.value.toLowerCase();
   const filtered = allEmployees.filter(emp =>
@@ -179,6 +229,7 @@ document.getElementById('employeeSearch').addEventListener('input', (e) => {
   renderEmployees(filtered);
 });
 
+// Add Employee Modal
 document.getElementById('addEmployeeBtn').addEventListener('click', () => {
   document.getElementById('employeeModalTitle').textContent = 'Add Employee';
   document.getElementById('employeeEditId').value = '';
@@ -188,6 +239,7 @@ document.getElementById('addEmployeeBtn').addEventListener('click', () => {
   openModal('employeeModal');
 });
 
+// Edit Employee
 async function editEmployee(id) {
   try {
     const emp = await apiCall(`/employees/${id}`);
@@ -202,6 +254,7 @@ async function editEmployee(id) {
   }
 }
 
+// Save Employee (Create or Update)
 document.getElementById('saveEmployeeBtn').addEventListener('click', async () => {
   const id = document.getElementById('employeeEditId').value;
   const name = document.getElementById('empName').value.trim();
@@ -234,6 +287,7 @@ document.getElementById('saveEmployeeBtn').addEventListener('click', async () =>
   }
 });
 
+// Delete Employee
 let deleteEmployeeId = null;
 
 function confirmDeleteEmployee(id, name) {
@@ -255,6 +309,10 @@ document.getElementById('confirmDeleteBtn').addEventListener('click', async () =
     showToast(err.message, 'error');
   }
 });
+
+// ═══════════════════════════════════════════════════════════
+// Attendance
+// ═══════════════════════════════════════════════════════════
 
 async function loadEmployeesDropdown() {
   try {
@@ -279,6 +337,7 @@ async function loadActiveCheckoutsDropdown() {
       select.innerHTML += `<option value="${r.id}">Record #${r.id} (Emp ID: ${r.employee_id}) - In: ${formatTime(r.check_in)}</option>`;
     });
   } catch (err) {
+    // Fail silently if date has no records
   }
 }
 
@@ -290,6 +349,7 @@ async function loadAttendanceRecords(dateFilter = null) {
     const records = await apiCall(endpoint);
     const tbody = document.getElementById('attendanceTableBody');
 
+    // Also update active check-outs dropdown
     loadActiveCheckoutsDropdown();
 
     if (records.length === 0) {
@@ -325,6 +385,7 @@ async function loadAttendanceRecords(dateFilter = null) {
   }
 }
 
+// Check-in
 document.getElementById('checkinBtn').addEventListener('click', async () => {
   const employeeId = document.getElementById('checkinEmployee').value;
   const status = document.getElementById('checkinStatus').value;
@@ -347,6 +408,7 @@ document.getElementById('checkinBtn').addEventListener('click', async () => {
   }
 });
 
+// Quick Check-out Dropdown Button
 document.getElementById('checkoutBtn').addEventListener('click', async () => {
   const recordId = document.getElementById('checkoutRecord').value;
 
@@ -358,6 +420,7 @@ document.getElementById('checkoutBtn').addEventListener('click', async () => {
   await checkOut(recordId);
 });
 
+// Check-out function
 async function checkOut(recordId) {
   try {
     await apiCall(`/attendance/check-out/${recordId}`, { method: 'POST' });
@@ -368,6 +431,7 @@ async function checkOut(recordId) {
   }
 }
 
+// Date filter
 document.getElementById('filterAttendanceBtn').addEventListener('click', () => {
   const date = document.getElementById('attendanceDateFilter').value;
   if (date) loadAttendanceRecords(date);
@@ -378,7 +442,12 @@ document.getElementById('clearFilterBtn').addEventListener('click', () => {
   loadAttendanceRecords();
 });
 
+// Set default date to today
 document.getElementById('attendanceDateFilter').value = todayStr();
+
+// ═══════════════════════════════════════════════════════════
+// Modal Helpers
+// ═══════════════════════════════════════════════════════════
 
 function openModal(id) {
   document.getElementById(id).classList.add('active');
@@ -388,21 +457,28 @@ function closeModal(id) {
   document.getElementById(id).classList.remove('active');
 }
 
+// Close modal buttons
 document.getElementById('closeEmployeeModal').addEventListener('click', () => closeModal('employeeModal'));
 document.getElementById('cancelEmployeeModal').addEventListener('click', () => closeModal('employeeModal'));
 document.getElementById('closeDeleteModal').addEventListener('click', () => closeModal('deleteModal'));
 document.getElementById('cancelDeleteModal').addEventListener('click', () => closeModal('deleteModal'));
 
+// Close modals on overlay click
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) overlay.classList.remove('active');
   });
 });
 
+// Close modals on Escape key
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
   }
 });
+
+// ═══════════════════════════════════════════════════════════
+// Initial Load
+// ═══════════════════════════════════════════════════════════
 
 loadDashboard();

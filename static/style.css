@@ -1,9 +1,12 @@
-
+/* ═══════════════════════════════════════════════════════════════
+   Attendance System — Premium Light Theme
+   ═══════════════════════════════════════════════════════════════ */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
+/* ─── CSS Custom Properties (Design Tokens) ─── */
 :root {
-  
+  /* Colors */
   --bg-primary: #f8f9fc;
   --bg-secondary: #ffffff;
   --bg-card: #ffffff;
@@ -32,14 +35,17 @@
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.08);
 
+  /* Spacing & Sizing */
   --sidebar-width: 260px;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
 
+  /* Transitions */
   --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* ─── Reset & Base ─── */
 *,
 *::before,
 *::after {
@@ -62,11 +68,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* ─── Layout ─── */
 .app-container {
   display: flex;
   min-height: 100vh;
 }
 
+/* ─── Sidebar ─── */
 .sidebar {
   width: var(--sidebar-width);
   background: var(--bg-sidebar);
@@ -167,6 +175,7 @@ body {
   flex-shrink: 0;
 }
 
+/* ─── Main Content ─── */
 .main-content {
   flex: 1;
   margin-left: var(--sidebar-width);
@@ -191,6 +200,7 @@ body {
   margin-top: 4px;
 }
 
+/* ─── Tab Content ─── */
 .tab-content {
   display: none;
   animation: fadeIn 0.3s ease;
@@ -205,6 +215,7 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ─── Stat Cards (Dashboard) ─── */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -261,6 +272,7 @@ body {
 .stat-card.total .stat-value   { color: var(--accent); }
 .stat-card.total .stat-icon    { background: var(--accent-light); }
 
+/* ─── Cards / Panels ─── */
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -286,6 +298,7 @@ body {
   padding: 24px;
 }
 
+/* ─── Tables ─── */
 .table-wrapper {
   overflow-x: auto;
 }
@@ -327,6 +340,7 @@ tbody tr:last-child td {
   border-bottom: none;
 }
 
+/* ─── Badges / Status Pills ─── */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -361,6 +375,7 @@ tbody tr:last-child td {
   background: currentColor;
 }
 
+/* ─── Buttons ─── */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -451,6 +466,7 @@ tbody tr:last-child td {
   border-color: var(--danger);
 }
 
+/* ─── Forms ─── */
 .form-group {
   margin-bottom: 18px;
 }
@@ -494,6 +510,7 @@ tbody tr:last-child td {
   gap: 16px;
 }
 
+/* ─── Modal ─── */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -554,6 +571,7 @@ tbody tr:last-child td {
   border-top: 1px solid var(--border);
 }
 
+/* ─── Toolbar ─── */
 .toolbar {
   display: flex;
   align-items: center;
@@ -597,6 +615,7 @@ tbody tr:last-child td {
   font-size: 0.9rem;
 }
 
+/* ─── Date Picker Row ─── */
 .date-picker-row {
   display: flex;
   align-items: center;
@@ -621,6 +640,7 @@ tbody tr:last-child td {
   box-shadow: 0 0 0 3px var(--accent-light);
 }
 
+/* ─── Empty State ─── */
 .empty-state {
   text-align: center;
   padding: 60px 20px;
@@ -643,6 +663,7 @@ tbody tr:last-child td {
   font-size: 0.85rem;
 }
 
+/* ─── Toast Notifications ─── */
 .toast-container {
   position: fixed;
   top: 24px;
@@ -681,11 +702,13 @@ tbody tr:last-child td {
   to { opacity: 0; transform: translateX(40px); }
 }
 
+/* ─── Actions Column ─── */
 .actions-cell {
   display: flex;
   gap: 6px;
 }
 
+/* ─── Responsive ─── */
 @media (max-width: 768px) {
   .sidebar {
     transform: translateX(-100%);
@@ -732,6 +755,7 @@ tbody tr:last-child td {
   font-size: 1.1rem;
 }
 
+/* ─── Loading Spinner ─── */
 .spinner {
   width: 20px;
   height: 20px;
