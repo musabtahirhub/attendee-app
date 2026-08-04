@@ -13,3 +13,4 @@ __pycache__/
 # OS files
 Thumbs.db
 .DS_Store
+DOCUMENTATION.md
