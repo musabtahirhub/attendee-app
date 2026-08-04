@@ -30,9 +30,6 @@ tools_by_name = {t.name.lower(): t for t in tools}
 
 
 def run_chatbot_agent(user_message: str, user_role: str) -> str:
-    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0)
-    llm_with_tools = llm.bind_tools(tools)
-
     system_prompt = (
         f"You are an AI Assistant for the Employee Attendance & Leave Management System.\n"
         f"The current user interacting with you has the role: '{user_role}'.\n"
@@ -42,28 +39,49 @@ def run_chatbot_agent(user_message: str, user_role: str) -> str:
         f"Always provide polite, concise, and accurate responses."
     )
 
-    messages = [
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=user_message),
-    ]
+    models_to_try = ["gemini-2.0-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash"]
+    last_exception = None
 
-    ai_msg = llm_with_tools.invoke(messages)
-    messages.append(ai_msg)
+    for model_name in models_to_try:
+        try:
+            llm = ChatGoogleGenerativeAI(model=model_name, temperature=0)
+            llm_with_tools = llm.bind_tools(tools)
 
-    if ai_msg.tool_calls:
-        for tool_call in ai_msg.tool_calls:
-            t_name = tool_call["name"].lower()
-            selected_tool = tools_by_name.get(t_name)
-            if selected_tool:
-                tool_output = selected_tool.invoke(tool_call["args"])
-                messages.append(ToolMessage(content=str(tool_output), tool_call_id=tool_call["id"]))
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_message),
+            ]
+
+            ai_msg = llm_with_tools.invoke(messages)
+            messages.append(ai_msg)
+
+            if ai_msg.tool_calls:
+                for tool_call in ai_msg.tool_calls:
+                    t_name = tool_call["name"].lower()
+                    selected_tool = tools_by_name.get(t_name)
+                    if selected_tool:
+                        tool_output = selected_tool.invoke(tool_call["args"])
+                        messages.append(ToolMessage(content=str(tool_output), tool_call_id=tool_call["id"]))
+                    else:
+                        messages.append(ToolMessage(content=f"Tool '{t_name}' not found", tool_call_id=tool_call["id"]))
+
+                final_response = llm.invoke(messages)
+                return str(final_response.content)
+
+            return str(ai_msg.content)
+
+        except Exception as e:
+            err_str = str(e)
+            logger.warning("Model '%s' failed: %s", model_name, err_str)
+            last_exception = e
+            if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str:
+                continue
             else:
-                messages.append(ToolMessage(content=f"Tool '{t_name}' not found", tool_call_id=tool_call["id"]))
+                raise e
 
-        final_response = llm.invoke(messages)
-        return str(final_response.content)
-
-    return str(ai_msg.content)
+    if last_exception:
+        raise last_exception
+    raise RuntimeError("No LLM model succeeded.")
 
 
 @router.post(
@@ -88,7 +106,9 @@ def chatbot_query(payload: ChatRequest):
     except Exception as e:
         logger.exception("Unexpected error during chatbot query processing: %s", str(e))
         err_msg = str(e)
-        if "API_KEY" in err_msg.upper() or "INVALID" in err_msg.upper() or "AUTHENTICATION" in err_msg.upper():
+        if "RESOURCE_EXHAUSTED" in err_msg or "429" in err_msg:
+            detail_msg = "Rate limit / quota exceeded on the Gemini API free tier. Please wait 10-15 seconds and try your request again."
+        elif "API_KEY" in err_msg.upper() or "INVALID" in err_msg.upper() or "AUTHENTICATION" in err_msg.upper():
             detail_msg = "Invalid Gemini API Key in .env. Please add a valid GOOGLE_API_KEY from https://aistudio.google.com/."
         else:
             detail_msg = f"Chatbot error: {err_msg}"
