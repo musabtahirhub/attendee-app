@@ -10,6 +10,9 @@ __pycache__/
 .vscode/
 .idea/
 
+# SQLite databases
+*.db
+
 # OS files
 Thumbs.db
 .DS_Store
