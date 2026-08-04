@@ -3,7 +3,6 @@ import os
 import logging
 import sys
 
-# ─── Configuration ───────────────────────────────────────────────
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 LOG_FILE = os.getenv("LOG_FILE")  # Optional: e.g. "logs/app.log"
@@ -13,8 +12,6 @@ LOG_FORMAT = (
 )
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
-
-# ─── Factory ─────────────────────────────────────────────────────
 
 def get_logger(name: str) -> logging.Logger:
 

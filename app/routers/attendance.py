@@ -17,9 +17,6 @@ logger = get_logger(__name__)
 
 router = APIRouter()
 
-
-# CHECK-IN
-
 @router.post(
     "/check-in",
     response_model=AttendanceResponse,
