@@ -1,3 +1,4 @@
+import time
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
@@ -39,13 +40,12 @@ def run_chatbot_agent(user_message: str, user_role: str) -> str:
         f"Always provide polite, concise, and accurate responses."
     )
 
-    # Primary fast model first, followed by stable fallbacks.
-    models_to_try = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.0-flash-lite"]
+    # Use distinct models that have separate free tier quota pools
+    models_to_try = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.0-flash-lite", "gemini-1.5-pro"]
     last_exception = None
 
     for model_name in models_to_try:
         try:
-            # Set max_retries=1 so rate limits immediately fall back to the next model rather than waiting for 30s exponential backoffs
             llm = ChatGoogleGenerativeAI(model=model_name, temperature=0, max_retries=1)
             llm_with_tools = llm.bind_tools(tools)
 
@@ -58,17 +58,26 @@ def run_chatbot_agent(user_message: str, user_role: str) -> str:
             messages.append(ai_msg)
 
             if ai_msg.tool_calls:
+                executed_results = []
                 for tool_call in ai_msg.tool_calls:
                     t_name = tool_call["name"].lower()
                     selected_tool = tools_by_name.get(t_name)
                     if selected_tool:
-                        tool_output = selected_tool.invoke(tool_call["args"])
-                        messages.append(ToolMessage(content=str(tool_output), tool_call_id=tool_call["id"]))
+                        tool_output = str(selected_tool.invoke(tool_call["args"]))
+                        messages.append(ToolMessage(content=tool_output, tool_call_id=tool_call["id"]))
+                        executed_results.append(tool_output)
                     else:
                         messages.append(ToolMessage(content=f"Tool '{t_name}' not found", tool_call_id=tool_call["id"]))
 
-                final_response = llm.invoke(messages)
-                return str(final_response.content)
+                # Try synthesizing response; if rate-limited on 2nd call, fallback to returning tool output directly
+                try:
+                    final_response = llm.invoke(messages)
+                    return str(final_response.content)
+                except Exception as synth_err:
+                    logger.warning("Synthesis call failed for '%s': %s. Returning raw tool output.", model_name, synth_err)
+                    if executed_results:
+                        return "\n".join(executed_results)
+                    raise synth_err
 
             return str(ai_msg.content)
 
@@ -77,12 +86,14 @@ def run_chatbot_agent(user_message: str, user_role: str) -> str:
             logger.warning("Model '%s' failed: %s", model_name, err_str)
             last_exception = e
             if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str or "NOT_FOUND" in err_str or "404" in err_str:
+                time.sleep(1.0)  # Brief delay to allow free-tier quota window to reset
                 continue
             else:
                 raise e
 
     if last_exception:
         raise last_exception
+    raise RuntimeError("No LLM model succeeded.")
     raise RuntimeError("No LLM model succeeded.")
 
 
