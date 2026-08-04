@@ -24,7 +24,7 @@ router = APIRouter()
     summary="Record employee check-in",
 )
 def check_in(data: AttendanceCheckIn, db: Session = Depends(get_db)):
-    # Verify employee exists
+
     employee = db.query(Employee).filter(Employee.id == data.employee_id).first()
     if not employee:
         logger.warning("Check-in failed — employee not found: id=%s", data.employee_id)
@@ -33,7 +33,6 @@ def check_in(data: AttendanceCheckIn, db: Session = Depends(get_db)):
             detail=f"Employee with id {data.employee_id} not found.",
         )
 
-    # Prevent duplicate check-in for the same day
     today = date.today()
     existing_record = (
         db.query(AttendanceRecord)
@@ -50,7 +49,6 @@ def check_in(data: AttendanceCheckIn, db: Session = Depends(get_db)):
             detail=f"Employee {data.employee_id} has already checked in today.",
         )
 
-    # Create the attendance record
     record = AttendanceRecord(
         employee_id=data.employee_id,
         date=today,
@@ -62,9 +60,6 @@ def check_in(data: AttendanceCheckIn, db: Session = Depends(get_db)):
     db.refresh(record)
     logger.info("Check-in recorded: record_id=%s employee_id=%s status='%s'", record.id, record.employee_id, record.status)
     return record
-
-
-# CHECK-OUT
 
 @router.post(
     "/check-out/{record_id}",
@@ -97,9 +92,6 @@ def check_out(record_id: int, db: Session = Depends(get_db)):
     logger.info("Check-out recorded: record_id=%s employee_id=%s", record.id, record.employee_id)
     return record
 
-
-# LIST RECORDS
-
 @router.get(
     "/",
     response_model=list[AttendanceResponse],
@@ -122,9 +114,6 @@ def list_attendance(
     records = query.offset(skip).limit(limit).all()
     logger.debug("Listed %d attendance records (date=%s, skip=%d, limit=%d)", len(records), record_date, skip, limit)
     return records
-
-
-# RECORDS BY EMPLOYEE
 
 @router.get(
     "/employee/{employee_id}",
@@ -151,9 +140,6 @@ def get_employee_attendance(
     )
     logger.debug("Retrieved %d attendance records for employee_id=%s", len(records), employee_id)
     return records
-
-
-# DAILY REPORT
 
 @router.get(
     "/report",

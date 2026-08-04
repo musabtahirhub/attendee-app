@@ -9,26 +9,20 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from app.database import engine, Base
-from app.models import Employee, AttendanceRecord  # noqa: F401
+from app.models import Employee, AttendanceRecord
 from app.routers import employees, attendance
 from app.logger import get_logger
 
 logger = get_logger(__name__)
 
-
-# Lifespan (startup / shutdown)
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # STARTUP
+
     Base.metadata.create_all(bind=engine)
     logger.info("Database tables created / verified.")
     yield
-    # SHUTDOWN
+
     logger.info("Application shutting down.")
-
-
-# Application Instance
 
 app = FastAPI(
     title="Attendance System API",
@@ -42,9 +36,6 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-
-# CORS Middleware
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -52,9 +43,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-# Request Logging Middleware
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -71,9 +59,6 @@ async def log_requests(request: Request, call_next):
     )
     return response
 
-
-# Register Routers (under /api)
-
 app.include_router(
     employees.router,
     prefix="/api/employees",
@@ -86,15 +71,9 @@ app.include_router(
     tags=["Attendance"],
 )
 
-
-# Static Files
-
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
-
-
-# Frontend & Health Check
 
 @app.get("/api/health", tags=["Health"])
 def health_check():
@@ -103,7 +82,6 @@ def health_check():
         "message": "Attendance System API is running",
         "version": "1.0.0",
     }
-
 
 @app.get("/", tags=["Frontend"], include_in_schema=False)
 def serve_frontend():

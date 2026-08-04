@@ -12,8 +12,6 @@ from sqlalchemy.orm import relationship
 
 from app.database import Base
 
-
-# Employee Model
 class Employee(Base):
     __tablename__ = "employees"
 
@@ -23,7 +21,6 @@ class Employee(Base):
     department = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    # Relationship: one employee -> many attendance records
     attendances = relationship(
         "AttendanceRecord",
         back_populates="employee",
@@ -33,8 +30,6 @@ class Employee(Base):
     def __repr__(self) -> str:
         return f"<Employee(id={self.id}, name='{self.name}', email='{self.email}')>"
 
-
-# Attendance Record Model
 class AttendanceRecord(Base):
     __tablename__ = "attendance_records"
 
@@ -47,7 +42,6 @@ class AttendanceRecord(Base):
     check_out = Column(DateTime, nullable=True)
     status = Column(String(20), nullable=False, default="present")
 
-    # Back-reference to parent Employee
     employee = relationship("Employee", back_populates="attendances")
 
     def __repr__(self) -> str:
