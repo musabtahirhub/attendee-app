@@ -40,14 +40,14 @@ def run_chatbot_agent(user_message: str, user_role: str) -> str:
         f"Always provide polite, concise, and accurate responses."
     )
 
-    # Use distinct models that have separate free tier quota pools
-    models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+    # Use valid fast models in order of speed and reliability
+    models_to_try = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-2.0-flash-lite"]
 
     last_exception = None
 
     for model_name in models_to_try:
         try:
-            llm = ChatGoogleGenerativeAI(model=model_name, temperature=0, max_retries=1)
+            llm = ChatGoogleGenerativeAI(model=model_name, temperature=0, max_retries=0)
             llm_with_tools = llm.bind_tools(tools)
 
             messages = [
@@ -56,7 +56,6 @@ def run_chatbot_agent(user_message: str, user_role: str) -> str:
             ]
 
             ai_msg = llm_with_tools.invoke(messages)
-            messages.append(ai_msg)
 
             if ai_msg.tool_calls:
                 executed_results = []
@@ -65,20 +64,12 @@ def run_chatbot_agent(user_message: str, user_role: str) -> str:
                     selected_tool = tools_by_name.get(t_name)
                     if selected_tool:
                         tool_output = str(selected_tool.invoke(tool_call["args"]))
-                        messages.append(ToolMessage(content=tool_output, tool_call_id=tool_call["id"]))
                         executed_results.append(tool_output)
                     else:
-                        messages.append(ToolMessage(content=f"Tool '{t_name}' not found", tool_call_id=tool_call["id"]))
+                        executed_results.append(f"Tool '{t_name}' not found.")
 
-                # Try synthesizing response; if rate-limited on 2nd call, fallback to returning tool output directly
-                try:
-                    final_response = llm.invoke(messages)
-                    return str(final_response.content)
-                except Exception as synth_err:
-                    logger.warning("Synthesis call failed for '%s': %s. Returning raw tool output.", model_name, synth_err)
-                    if executed_results:
-                        return "\n".join(executed_results)
-                    raise synth_err
+                if executed_results:
+                    return "\n".join(executed_results)
 
             return str(ai_msg.content)
 
@@ -86,7 +77,8 @@ def run_chatbot_agent(user_message: str, user_role: str) -> str:
             err_str = str(e)
             logger.warning("Model '%s' failed: %s", model_name, err_str)
             last_exception = e
-            time.sleep(1.0)  # Brief delay before trying next model fallback
+            if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str:
+                time.sleep(0.5)  # Brief delay only on rate limits before trying next model
             continue
 
     if last_exception:
