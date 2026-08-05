@@ -1,7 +1,7 @@
 from datetime import datetime, date
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 class EmployeeCreate(BaseModel):
     name: str
@@ -50,3 +50,10 @@ class DailyReportResponse(BaseModel):
     total_late: int
     total_absent: int
     records: list[AttendanceResponse]
+
+class ChatRequest(BaseModel):
+    message: str = Field(..., description="User query for the chatbot")
+    user_role: str = Field(default="employee", description="User role, e.g., 'employee', 'manager', or 'admin'")
+
+class ChatResponse(BaseModel):
+    response: str

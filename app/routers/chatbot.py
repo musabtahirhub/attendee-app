@@ -1,90 +1,72 @@
+import os
 import time
+from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
+from langchain_core.messages import SystemMessage, HumanMessage
 
 from app.chatbot_tools import (
     check_employee_status,
     apply_employee_leave,
     approve_employee_leave,
 )
+from app.prompts import get_system_prompt
+from app.schemas import ChatRequest, ChatResponse
 from app.logger import get_logger
 
-logger = get_logger(__name__)
+load_dotenv()
 
+logger = get_logger(__name__)
 router = APIRouter()
 
-
-class ChatRequest(BaseModel):
-    message: str = Field(..., description="User query for the chatbot")
-    user_role: str = Field(default="employee", description="User role, e.g., 'employee', 'manager', or 'admin'")
-
-
-class ChatResponse(BaseModel):
-    response: str
-
+# 12-Factor App: Externalized Configuration via Environment Variables
+MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.0-flash")
+MODEL_TEMPERATURE = float(os.getenv("MODEL_TEMPERATURE", "0"))
+MODEL_MAX_RETRIES = int(os.getenv("MODEL_MAX_RETRIES", "0"))
+PROMPT_VERSION = os.getenv("PROMPT_VERSION", "v1.0.0")
 
 tools = [check_employee_status, apply_employee_leave, approve_employee_leave]
 tools_by_name = {t.name.lower(): t for t in tools}
 
 
 def run_chatbot_agent(user_message: str, user_role: str) -> str:
-    system_prompt = (
-        f"You are an AI Assistant for the Employee Attendance & Leave Management System.\n"
-        f"The current user interacting with you has the role: '{user_role}'.\n"
-        f"You have access to tools for checking employee status (by ID or Name), applying for leave, and approving leave requests.\n"
-        f"When invoking `check_employee_status`, pass the employee ID (e.g. '1') or Name.\n"
-        f"When invoking `approve_employee_leave`, pass user_role='{user_role}'.\n"
-        f"Always provide polite, concise, and accurate responses."
-    )
+    system_prompt = get_system_prompt(version=PROMPT_VERSION, user_role=user_role)
 
-    # Use valid fast models in order of speed and reliability
-    models_to_try = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-2.0-flash-lite"]
+    try:
+        llm = ChatGoogleGenerativeAI(
+            model=MODEL_NAME,
+            temperature=MODEL_TEMPERATURE,
+            max_retries=MODEL_MAX_RETRIES,
+        )
+        llm_with_tools = llm.bind_tools(tools)
 
-    last_exception = None
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_message),
+        ]
 
-    for model_name in models_to_try:
-        try:
-            llm = ChatGoogleGenerativeAI(model=model_name, temperature=0, max_retries=0)
-            llm_with_tools = llm.bind_tools(tools)
+        ai_msg = llm_with_tools.invoke(messages)
 
-            messages = [
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=user_message),
-            ]
+        if ai_msg.tool_calls:
+            executed_results = []
+            for tool_call in ai_msg.tool_calls:
+                t_name = tool_call["name"].lower()
+                selected_tool = tools_by_name.get(t_name)
+                if selected_tool:
+                    tool_output = str(selected_tool.invoke(tool_call["args"]))
+                    executed_results.append(tool_output)
+                else:
+                    executed_results.append(f"Tool '{t_name}' not found.")
 
-            ai_msg = llm_with_tools.invoke(messages)
+            if executed_results:
+                return "\n".join(executed_results)
 
-            if ai_msg.tool_calls:
-                executed_results = []
-                for tool_call in ai_msg.tool_calls:
-                    t_name = tool_call["name"].lower()
-                    selected_tool = tools_by_name.get(t_name)
-                    if selected_tool:
-                        tool_output = str(selected_tool.invoke(tool_call["args"]))
-                        executed_results.append(tool_output)
-                    else:
-                        executed_results.append(f"Tool '{t_name}' not found.")
+        return str(ai_msg.content)
 
-                if executed_results:
-                    return "\n".join(executed_results)
-
-            return str(ai_msg.content)
-
-        except Exception as e:
-            err_str = str(e)
-            logger.warning("Model '%s' failed: %s", model_name, err_str)
-            last_exception = e
-            if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str:
-                time.sleep(0.5)  # Brief delay only on rate limits before trying next model
-            continue
-
-    if last_exception:
-        raise last_exception
-    raise RuntimeError("No LLM model succeeded.")
-
+    except Exception as e:
+        logger.exception("Error executing chatbot agent with model '%s': %s", MODEL_NAME, str(e))
+        raise
 
 
 @router.post(
@@ -94,7 +76,6 @@ def run_chatbot_agent(user_message: str, user_role: str) -> str:
     summary="Query the AI Chatbot",
 )
 def chatbot_query(payload: ChatRequest):
-    logger.info("POST /api/chatbot/query — role='%s', message='%s'", payload.user_role, payload.message)
     try:
         reply = run_chatbot_agent(payload.message, payload.user_role)
         return ChatResponse(response=reply)
