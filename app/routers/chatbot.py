@@ -41,7 +41,8 @@ def run_chatbot_agent(user_message: str, user_role: str) -> str:
     )
 
     # Use distinct models that have separate free tier quota pools
-    models_to_try = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.0-flash-lite", "gemini-1.5-pro"]
+    models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+
     last_exception = None
 
     for model_name in models_to_try:
@@ -85,16 +86,13 @@ def run_chatbot_agent(user_message: str, user_role: str) -> str:
             err_str = str(e)
             logger.warning("Model '%s' failed: %s", model_name, err_str)
             last_exception = e
-            if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str or "NOT_FOUND" in err_str or "404" in err_str:
-                time.sleep(1.0)  # Brief delay to allow free-tier quota window to reset
-                continue
-            else:
-                raise e
+            time.sleep(1.0)  # Brief delay before trying next model fallback
+            continue
 
     if last_exception:
         raise last_exception
     raise RuntimeError("No LLM model succeeded.")
-    raise RuntimeError("No LLM model succeeded.")
+
 
 
 @router.post(
