@@ -10,6 +10,7 @@ from app.chatbot_tools import (
     check_employee_status,
     apply_employee_leave,
     approve_employee_leave,
+    list_pending_leaves,
 )
 from app.prompts import get_system_prompt
 from app.schemas import ChatRequest, ChatResponse
@@ -26,8 +27,14 @@ MODEL_TEMPERATURE = float(os.getenv("MODEL_TEMPERATURE", "0"))
 MODEL_MAX_RETRIES = int(os.getenv("MODEL_MAX_RETRIES", "0"))
 PROMPT_VERSION = os.getenv("PROMPT_VERSION", "v1.0.0")
 
-tools = [check_employee_status, apply_employee_leave, approve_employee_leave]
+tools = [
+    check_employee_status,
+    apply_employee_leave,
+    approve_employee_leave,
+    list_pending_leaves,
+]
 tools_by_name = {t.name.lower(): t for t in tools}
+
 
 
 def _clean_response_content(content) -> str:

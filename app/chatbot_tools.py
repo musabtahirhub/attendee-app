@@ -130,3 +130,33 @@ def approve_employee_leave(leave_id: int, user_role: str) -> str:
         return f"Error approving leave: {str(e)}"
     finally:
         db.close()
+
+
+@tool
+def list_pending_leaves(user_role: str) -> str:
+    """Lists all pending leave requests requiring approval. User role must be 'manager' or 'admin'."""
+    logger.info("Tool list_pending_leaves called for user_role='%s'", user_role)
+    if user_role.lower() not in ["manager", "admin"]:
+        return f"Permission denied. Role '{user_role}' is not authorized to view pending leave requests. Requires 'manager' or 'admin'."
+
+    db = SessionLocal()
+    try:
+        pending_leaves = queries.get_pending_leaves(db)
+        if not pending_leaves:
+            return "There are currently no pending leave requests."
+
+        results = ["Pending Leave Requests:"]
+        for req in pending_leaves:
+            emp = queries.get_employee_by_id(db, req.employee_id)
+            emp_name = emp.name if emp else f"Employee #{req.employee_id}"
+            results.append(
+                f"- Leave ID #{req.id}: {emp_name} (ID: {req.employee_id}) | "
+                f"Dates: {req.start_date} to {req.end_date} | Reason: {req.reason} | Status: {req.status}"
+            )
+        return "\n".join(results)
+    except Exception as e:
+        logger.exception("Error in list_pending_leaves tool")
+        return f"Error fetching pending leave requests: {str(e)}"
+    finally:
+        db.close()
+
