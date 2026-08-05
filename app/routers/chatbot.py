@@ -30,6 +30,31 @@ tools = [check_employee_status, apply_employee_leave, approve_employee_leave]
 tools_by_name = {t.name.lower(): t for t in tools}
 
 
+def _clean_response_content(content) -> str:
+    """Sanitizes raw LLM response content into clean plain text for frontend consumption."""
+    if not content:
+        return "I'm sorry, I couldn't process your request. Please try asking in a different way."
+
+    if isinstance(content, str):
+        text = content
+    elif isinstance(content, list):
+        text_parts = []
+        for item in content:
+            if isinstance(item, str):
+                text_parts.append(item)
+            elif isinstance(item, dict):
+                if item.get("type") == "text" and "text" in item:
+                    text_parts.append(item["text"])
+                elif "text" in item:
+                    text_parts.append(str(item["text"]))
+        text = "\n".join(text_parts) if text_parts else str(content)
+    else:
+        text = str(content)
+
+    text = text.strip()
+    return text
+
+
 def run_chatbot_agent(user_message: str, user_role: str) -> str:
     system_prompt = get_system_prompt(version=PROMPT_VERSION, user_role=user_role)
 
@@ -62,7 +87,7 @@ def run_chatbot_agent(user_message: str, user_role: str) -> str:
             if executed_results:
                 return "\n".join(executed_results)
 
-        return str(ai_msg.content)
+        return _clean_response_content(ai_msg.content)
 
     except Exception as e:
         logger.exception("Error executing chatbot agent with model '%s': %s", MODEL_NAME, str(e))
