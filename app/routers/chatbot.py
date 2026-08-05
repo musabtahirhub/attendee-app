@@ -11,6 +11,7 @@ from app.chatbot_tools import (
     apply_employee_leave,
     approve_employee_leave,
     list_pending_leaves,
+    check_my_leave_requests,
 )
 from app.prompts import get_system_prompt
 from app.schemas import ChatRequest, ChatResponse
@@ -32,8 +33,10 @@ tools = [
     apply_employee_leave,
     approve_employee_leave,
     list_pending_leaves,
+    check_my_leave_requests,
 ]
 tools_by_name = {t.name.lower(): t for t in tools}
+
 
 
 

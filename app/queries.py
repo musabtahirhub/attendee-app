@@ -97,3 +97,14 @@ def get_approved_leave_by_employee_and_date(
         )
         .first()
     )
+
+
+def get_leave_requests_by_employee(db: Session, employee_id: int) -> List[LeaveRequest]:
+    logger.debug("Fetching leave requests for employee_id=%s", employee_id)
+    return (
+        db.query(LeaveRequest)
+        .filter(LeaveRequest.employee_id == employee_id)
+        .order_by(LeaveRequest.created_at.desc())
+        .all()
+    )
+

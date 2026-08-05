@@ -160,3 +160,32 @@ def list_pending_leaves(user_role: str) -> str:
     finally:
         db.close()
 
+
+@tool
+def check_my_leave_requests(employee_query: str) -> str:
+    """Checks the status and history of leave requests for an employee given their Employee ID or Name (e.g. '1', 'ID 1', or 'Hassan Ali')."""
+    logger.info("Tool check_my_leave_requests called for query='%s'", employee_query)
+    db = SessionLocal()
+    try:
+        employee = find_employee(db, employee_query)
+        if not employee:
+            return f"Employee matching '{employee_query}' (by ID or Name) was not found."
+
+        leave_requests = queries.get_leave_requests_by_employee(db, employee.id)
+        if not leave_requests:
+            return f"No leave requests found for employee {employee.name} (ID: {employee.id})."
+
+        results = [f"Leave Requests for {employee.name} (ID: {employee.id}):"]
+        for req in leave_requests:
+            results.append(
+                f"- Leave ID #{req.id}: Status '{req.status.upper()}' | "
+                f"Dates: {req.start_date} to {req.end_date} | Reason: {req.reason}"
+            )
+        return "\n".join(results)
+    except Exception as e:
+        logger.exception("Error in check_my_leave_requests tool")
+        return f"Error fetching leave requests: {str(e)}"
+    finally:
+        db.close()
+
+
