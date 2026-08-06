@@ -1,5 +1,3 @@
-"""System prompt definitions and version management for the AI Chatbot."""
-
 from typing import Dict
 
 PROMPT_VERSIONS: Dict[str, str] = {
@@ -47,6 +45,5 @@ DEFAULT_PROMPT_VERSION = "v1.0.0"
 
 
 def get_system_prompt(version: str = DEFAULT_PROMPT_VERSION, user_role: str = "employee") -> str:
-    """Retrieves and formats a system prompt template by version string and user role."""
     template = PROMPT_VERSIONS.get(version, PROMPT_VERSIONS[DEFAULT_PROMPT_VERSION])
     return template.format(user_role=user_role)

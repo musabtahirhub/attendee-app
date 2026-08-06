@@ -22,7 +22,6 @@ load_dotenv()
 logger = get_logger(__name__)
 router = APIRouter()
 
-# 12-Factor App: Externalized Configuration via Environment Variables
 MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.0-flash")
 MODEL_TEMPERATURE = float(os.getenv("MODEL_TEMPERATURE", "0"))
 MODEL_MAX_RETRIES = int(os.getenv("MODEL_MAX_RETRIES", "0"))
@@ -38,10 +37,7 @@ tools = [
 tools_by_name = {t.name.lower(): t for t in tools}
 
 
-
-
 def _clean_response_content(content) -> str:
-    """Sanitizes raw LLM response content into clean plain text for frontend consumption."""
     if not content:
         return "I'm sorry, I couldn't process your request. Please try asking in a different way."
 

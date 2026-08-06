@@ -11,10 +11,8 @@ logger = get_logger(__name__)
 
 
 def find_employee(db, query: str):
-    """Helper to find an employee by ID or Name."""
     query = str(query).strip()
 
-    # Check if query contains an ID like '1', 'ID 1', '#1', 'employee 1'
     if query.isdigit():
         emp = queries.get_employee_by_id(db, int(query))
         if emp:
@@ -26,7 +24,6 @@ def find_employee(db, query: str):
         if emp:
             return emp
 
-    # Fallback to name search
     return queries.get_employee_by_name(db, query)
 
 
@@ -187,5 +184,3 @@ def check_my_leave_requests(employee_query: str) -> str:
         return f"Error fetching leave requests: {str(e)}"
     finally:
         db.close()
-
-
