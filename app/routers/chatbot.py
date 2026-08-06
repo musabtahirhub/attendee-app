@@ -80,10 +80,7 @@ def _extract_chunk_text(content) -> str:
 
 
 def generate_chat_stream(user_message: str, user_role: str):
-    """
-    Generator function that streams AI responses token-by-token using LangChain.
-    Intercepts tool calls, executes them locally, and yields formatted database results.
-    """
+    """Streams AI chatbot response tokens directly using LangChain and FastAPI StreamingResponse."""
     system_prompt = get_system_prompt(version=PROMPT_VERSION, user_role=user_role)
 
     try:
@@ -99,64 +96,22 @@ def generate_chat_stream(user_message: str, user_role: str):
             HumanMessage(content=user_message),
         ]
 
-        accumulated_chunk = None
-        tool_calls_detected = []
-        has_yielded_text = False
-
         for chunk in llm_with_tools.stream(messages):
-            if accumulated_chunk is None:
-                accumulated_chunk = chunk
-            else:
-                accumulated_chunk = accumulated_chunk + chunk
-
-            # Inspect chunk for tool call triggers
+            # Execute tool call directly if triggered by Gemini
             if hasattr(chunk, "tool_calls") and chunk.tool_calls:
-                for tc in chunk.tool_calls:
-                    if tc not in tool_calls_detected:
-                        tool_calls_detected.append(tc)
-
-            # Inspect chunk for tool call chunks
-            if hasattr(chunk, "tool_call_chunks") and chunk.tool_call_chunks:
-                for tc_chunk in chunk.tool_call_chunks:
-                    if isinstance(tc_chunk, dict) and tc_chunk.get("name"):
-                        t_name = tc_chunk["name"].lower()
-                        if not any(t.get("name", "").lower() == t_name for t in tool_calls_detected):
-                            tool_calls_detected.append(tc_chunk)
-
-            # Extract text token
-            text_token = _extract_chunk_text(chunk.content)
-
-            # Yield token live if no tool calls are being processed
-            if text_token and not tool_calls_detected:
-                has_yielded_text = True
-                yield text_token
-
-        # Check accumulated chunk for any tool calls assembled at the end of streaming
-        if accumulated_chunk and hasattr(accumulated_chunk, "tool_calls") and accumulated_chunk.tool_calls:
-            for tc in accumulated_chunk.tool_calls:
-                if tc not in tool_calls_detected:
-                    tool_calls_detected.append(tc)
-
-        # Tool Execution Handling (Direct Return)
-        if tool_calls_detected:
-            executed_results = []
-            for tool_call in tool_calls_detected:
-                t_name = tool_call.get("name", "").lower()
-                selected_tool = tools_by_name.get(t_name)
-                if selected_tool:
-                    tool_args = tool_call.get("args", {})
-                    logger.info("Executing tool '%s' with args: %s", t_name, tool_args)
-                    tool_output = str(selected_tool.invoke(tool_args))
-                    executed_results.append(tool_output)
-                else:
-                    executed_results.append(f"Tool '{t_name}' not found.")
-
-            if executed_results:
-                yield "\n".join(executed_results)
-        elif not has_yielded_text:
-            cleaned = _clean_response_content(accumulated_chunk.content if accumulated_chunk else None)
-            if cleaned:
-                yield cleaned
+                for tool_call in chunk.tool_calls:
+                    t_name = tool_call.get("name", "").lower()
+                    selected_tool = tools_by_name.get(t_name)
+                    if selected_tool:
+                        tool_args = tool_call.get("args", {})
+                        logger.info("Executing tool '%s' with args: %s", t_name, tool_args)
+                        yield str(selected_tool.invoke(tool_args))
+                    else:
+                        yield f"Tool '{t_name}' not found."
+            else:
+                text_token = _extract_chunk_text(chunk.content)
+                if text_token:
+                    yield text_token
 
     except SQLAlchemyError as e:
         logger.exception("Database error during chatbot stream processing: %s", str(e))
