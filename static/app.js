@@ -500,17 +500,65 @@ if (chatForm) {
     const loadingId = appendChatLoading();
 
     try {
-      const res = await apiCall('/chatbot/query', {
+      const response = await fetch('/api/chatbot/query', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userMsg, user_role: userRole }),
       });
+
       removeChatLoading(loadingId);
-      appendChatMessage('assistant', res.response);
+
+      if (!response.ok) {
+        let errDetail = `HTTP ${response.status}`;
+        try {
+          const errData = await response.json();
+          if (errData.detail) errDetail = errData.detail;
+        } catch (_) {}
+        throw new Error(errDetail);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      const assistantMsgDiv = createAssistantMessageDiv();
+      let fullText = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        fullText += chunk;
+        updateAssistantMessage(assistantMsgDiv, fullText);
+      }
     } catch (err) {
       removeChatLoading(loadingId);
       appendChatMessage('assistant', `⚠️ Error: ${err.message}`);
     }
   });
+}
+
+function createAssistantMessageDiv() {
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'chat-message assistant';
+  msgDiv.style.cssText = `
+    background: var(--bg-card);
+    color: var(--text-primary);
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    max-width: 85%;
+    align-self: flex-start;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    font-size: 0.88rem;
+    line-height: 1.5;
+  `;
+  chatHistory.appendChild(msgDiv);
+  chatHistory.scrollTop = chatHistory.scrollHeight;
+  return msgDiv;
+}
+
+function updateAssistantMessage(msgDiv, text) {
+  msgDiv.innerHTML = escapeHtml(text).replace(/\n/g, '<br/>');
+  chatHistory.scrollTop = chatHistory.scrollHeight;
 }
 
 function appendChatMessage(sender, text) {
