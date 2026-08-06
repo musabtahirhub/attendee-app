@@ -10,7 +10,6 @@ load_dotenv()
 
 logger = get_logger(__name__)
 
-# Fallback check for legacy monolithic connection string
 raw_database_url = os.getenv("DATABASE_URL")
 
 if raw_database_url:
@@ -18,7 +17,6 @@ if raw_database_url:
         raw_database_url = raw_database_url.replace("postgres://", "postgresql://", 1)
     DATABASE_URL = raw_database_url
 else:
-    # 12-Factor App: Discrete Database Configuration Parameters
     db_driver = os.getenv("DB_DRIVER", "postgresql+psycopg2")
     db_user = os.getenv("DB_USER", "postgres")
     db_password = os.getenv("DB_PASSWORD", "")

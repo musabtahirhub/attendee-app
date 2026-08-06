@@ -27,9 +27,8 @@ def find_employee(db, query: str):
     return queries.get_employee_by_name(db, query)
 
 
-@tool
+@tool(description="Checks an employee's attendance status or approved leave for today given their Employee ID or Name (e.g. '1', 'ID 1', or 'Hassan Ali').")
 def check_employee_status(employee_query: str) -> str:
-    """Checks an employee's attendance status or approved leave for today given their Employee ID or Name (e.g. '1', 'ID 1', or 'Hassan Ali')."""
     logger.info("Tool check_employee_status called for query='%s'", employee_query)
     db = SessionLocal()
     try:
@@ -64,9 +63,8 @@ def check_employee_status(employee_query: str) -> str:
         db.close()
 
 
-@tool
+@tool(description="Submits a leave request for an employee by Employee ID or Name. Dates must be formatted as YYYY-MM-DD.")
 def apply_employee_leave(employee_query: str, start_date: str, end_date: str, reason: str) -> str:
-    """Submits a leave request for an employee by Employee ID or Name. Dates must be formatted as YYYY-MM-DD."""
     logger.info("Tool apply_employee_leave called for query='%s', dates=%s to %s", employee_query, start_date, end_date)
     db = SessionLocal()
     try:
@@ -102,9 +100,8 @@ def apply_employee_leave(employee_query: str, start_date: str, end_date: str, re
         db.close()
 
 
-@tool
+@tool(description="Approves a pending leave request given the leave ID. User role must be 'manager' or 'admin'.")
 def approve_employee_leave(leave_id: int, user_role: str) -> str:
-    """Approves a pending leave request given the leave ID. User role must be 'manager' or 'admin'."""
     logger.info("Tool approve_employee_leave called for leave_id=%s, user_role='%s'", leave_id, user_role)
     if user_role.lower() not in ["manager", "admin"]:
         return f"Permission denied. Role '{user_role}' is not authorized to approve leave requests. Requires 'manager' or 'admin'."
@@ -129,9 +126,8 @@ def approve_employee_leave(leave_id: int, user_role: str) -> str:
         db.close()
 
 
-@tool
+@tool(description="Lists all pending leave requests requiring approval. User role must be 'manager' or 'admin'.")
 def list_pending_leaves(user_role: str) -> str:
-    """Lists all pending leave requests requiring approval. User role must be 'manager' or 'admin'."""
     logger.info("Tool list_pending_leaves called for user_role='%s'", user_role)
     if user_role.lower() not in ["manager", "admin"]:
         return f"Permission denied. Role '{user_role}' is not authorized to view pending leave requests. Requires 'manager' or 'admin'."
@@ -158,9 +154,8 @@ def list_pending_leaves(user_role: str) -> str:
         db.close()
 
 
-@tool
+@tool(description="Checks the status and history of leave requests for an employee given their Employee ID or Name (e.g. '1', 'ID 1', or 'Hassan Ali').")
 def check_my_leave_requests(employee_query: str) -> str:
-    """Checks the status and history of leave requests for an employee given their Employee ID or Name (e.g. '1', 'ID 1', or 'Hassan Ali')."""
     logger.info("Tool check_my_leave_requests called for query='%s'", employee_query)
     db = SessionLocal()
     try:
