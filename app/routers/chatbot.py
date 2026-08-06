@@ -96,7 +96,7 @@ def generate_chat_stream(user_message: str, user_role: str):
             HumanMessage(content=user_message),
         ]
 
-        for chunk in llm_with_tools.stream(messages):
+        for chunk in llm_with_tools.stream(messages, stream_mode=True, flush=True):
             # Execute tool call directly if triggered by Gemini
             if hasattr(chunk, "tool_calls") and chunk.tool_calls:
                 for tool_call in chunk.tool_calls:
