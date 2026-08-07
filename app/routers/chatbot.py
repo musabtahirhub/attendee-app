@@ -63,7 +63,7 @@ def _clean_response_content(content) -> str:
 
 
 def _extract_chunk_text(content) -> str:
-    """Extract string text from streaming chunk content."""
+
     if not content:
         return ""
     if isinstance(content, str):
@@ -80,7 +80,6 @@ def _extract_chunk_text(content) -> str:
 
 
 async def generate_chat_stream(user_message: str, user_role: str):
-    """Streams AI chatbot response tokens directly using LangChain and FastAPI StreamingResponse."""
     system_prompt = get_system_prompt(version=PROMPT_VERSION, user_role=user_role)
 
     try:
@@ -96,7 +95,7 @@ async def generate_chat_stream(user_message: str, user_role: str):
             HumanMessage(content=user_message),
         ]
 
-        # First LLM Call: Stream model tokens or gather tool requests
+       
         ai_message_chunk = None
         async for chunk in llm_with_tools.astream(messages):
             if ai_message_chunk is None:
@@ -104,12 +103,11 @@ async def generate_chat_stream(user_message: str, user_role: str):
             else:
                 ai_message_chunk += chunk
 
-            # Stream direct text response chunks if no tool calls are present
+           
             text_token = _extract_chunk_text(chunk.content)
             if text_token and not chunk.tool_calls:
                 yield f"data: {text_token}\n\n"
-
-        # Check if model requested any tool executions
+    
         if ai_message_chunk and ai_message_chunk.tool_calls:
             messages.append(ai_message_chunk)
 
@@ -121,7 +119,7 @@ async def generate_chat_stream(user_message: str, user_role: str):
                     tool_args = tool_call.get("args", {})
                     logger.info("Executing tool '%s' with args: %s", t_name, tool_args)
                     
-                    # Execute tool asynchronously if available, fallback to sync invoke
+                    
                     if hasattr(selected_tool, "ainvoke"):
                         tool_output = await selected_tool.ainvoke(tool_args)
                     else:
@@ -135,7 +133,7 @@ async def generate_chat_stream(user_message: str, user_role: str):
                         ToolMessage(content=f"Tool '{t_name}' not found.", tool_call_id=tool_call["id"])
                     )
 
-            # Second LLM Call: Stream model's synthesis of tool execution results
+           
             async for chunk in llm_with_tools.astream(messages):
                 text_token = _extract_chunk_text(chunk.content)
                 if text_token:
