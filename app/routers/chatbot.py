@@ -107,7 +107,7 @@ async def generate_chat_stream(user_message: str, user_role: str):
             # stream direct text response chunks if no tool calls 
             text_token = _extract_chunk_text(chunk.content)
             if text_token and not chunk.tool_calls:
-                yield f"data: {text_token}\n\n"
+                yield text_token
 
         # check if model requested any tool 
         if ai_message_chunk and ai_message_chunk.tool_calls:
@@ -139,7 +139,7 @@ async def generate_chat_stream(user_message: str, user_role: str):
             async for chunk in llm_with_tools.astream(messages):
                 text_token = _extract_chunk_text(chunk.content)
                 if text_token:
-                    yield f"data: {text_token}\n\n"
+                    yield text_token
 
     except SQLAlchemyError as e:
         logger.exception("Database error during chatbot stream processing: %s", str(e))
@@ -162,6 +162,6 @@ async def generate_chat_stream(user_message: str, user_role: str):
 def chatbot_query(payload: ChatRequest):
     return StreamingResponse(
         generate_chat_stream(payload.message, payload.user_role),
-        media_type="text/event-stream",
+        media_type="text/plain",
     )
 
