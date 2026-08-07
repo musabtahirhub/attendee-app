@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.exc import SQLAlchemyError
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
 
 from app.chatbot_tools import (
     check_employee_status,
@@ -79,7 +79,7 @@ def _extract_chunk_text(content) -> str:
     return str(content)
 
 
-def generate_chat_stream(user_message: str, user_role: str):
+async def generate_chat_stream(user_message: str, user_role: str):
     """Streams AI chatbot response tokens directly using LangChain and FastAPI StreamingResponse."""
     system_prompt = get_system_prompt(version=PROMPT_VERSION, user_role=user_role)
 
@@ -96,36 +96,63 @@ def generate_chat_stream(user_message: str, user_role: str):
             HumanMessage(content=user_message),
         ]
 
-        for chunk in llm_with_tools.stream(messages):
-            # Execute tool call directly if triggered by Gemini
-            if hasattr(chunk, "tool_calls") and chunk.tool_calls:
-                for tool_call in chunk.tool_calls:
-                    t_name = tool_call.get("name", "").lower()
-                    selected_tool = tools_by_name.get(t_name)
-                    if selected_tool:
-                        tool_args = tool_call.get("args", {})
-                        logger.info("Executing tool '%s' with args: %s", t_name, tool_args)
-                        yield str(selected_tool.invoke(tool_args))
-                    else:
-                        yield f"Tool '{t_name}' not found."
+        # First LLM Call: Stream model tokens or gather tool requests
+        ai_message_chunk = None
+        async for chunk in llm_with_tools.astream(messages):
+            if ai_message_chunk is None:
+                ai_message_chunk = chunk
             else:
+                ai_message_chunk += chunk
+
+            # Stream direct text response chunks if no tool calls are present
+            text_token = _extract_chunk_text(chunk.content)
+            if text_token and not chunk.tool_calls:
+                yield f"data: {text_token}\n\n"
+
+        # Check if model requested any tool executions
+        if ai_message_chunk and ai_message_chunk.tool_calls:
+            messages.append(ai_message_chunk)
+
+            for tool_call in ai_message_chunk.tool_calls:
+                t_name = tool_call.get("name", "").lower()
+                selected_tool = tools_by_name.get(t_name)
+                
+                if selected_tool:
+                    tool_args = tool_call.get("args", {})
+                    logger.info("Executing tool '%s' with args: %s", t_name, tool_args)
+                    
+                    # Execute tool asynchronously if available, fallback to sync invoke
+                    if hasattr(selected_tool, "ainvoke"):
+                        tool_output = await selected_tool.ainvoke(tool_args)
+                    else:
+                        tool_output = selected_tool.invoke(tool_args)
+
+                    messages.append(
+                        ToolMessage(content=str(tool_output), tool_call_id=tool_call["id"])
+                    )
+                else:
+                    messages.append(
+                        ToolMessage(content=f"Tool '{t_name}' not found.", tool_call_id=tool_call["id"])
+                    )
+
+            # Second LLM Call: Stream model's synthesis of tool execution results
+            async for chunk in llm_with_tools.astream(messages):
                 text_token = _extract_chunk_text(chunk.content)
                 if text_token:
-                    yield text_token
+                    yield f"data: {text_token}\n\n"
 
     except SQLAlchemyError as e:
         logger.exception("Database error during chatbot stream processing: %s", str(e))
-        yield "Error: A database error occurred while processing your request. Please try again later."
+        yield "data: Error: A database error occurred while processing your request.\n\n"
     except Exception as e:
         logger.exception("Unexpected error during chatbot stream processing: %s", str(e))
         err_msg = str(e)
         if "RESOURCE_EXHAUSTED" in err_msg or "429" in err_msg:
-            yield "Error: Rate limit / quota exceeded on the Gemini API free tier. Please wait 10-15 seconds and try your request again."
-        elif "API_KEY" in err_msg.upper() or "INVALID" in err_msg.upper() or "AUTHENTICATION" in err_msg.upper():
-            yield "Error: Invalid Gemini API Key in .env. Please add a valid GOOGLE_API_KEY from https://aistudio.google.com/."
+            yield "data: Error: Rate limit / quota exceeded on the Gemini API free tier.\n\n"
+        elif any(k in err_msg.upper() for k in ["API_KEY", "INVALID", "AUTHENTICATION"]):
+            yield "data: Error: Invalid Gemini API Key in .env.\n\n"
         else:
-            yield f"Error: Chatbot error: {err_msg}"
-
+            yield f"data: Error: Chatbot error: {err_msg}\n\n"
 
 def run_chatbot_agent(user_message: str, user_role: str) -> str:
     """Helper function for non-streaming query execution."""
