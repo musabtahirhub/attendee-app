@@ -63,7 +63,7 @@ def _clean_response_content(content) -> str:
 
 
 def _extract_chunk_text(content) -> str:
-
+    
     if not content:
         return ""
     if isinstance(content, str):
@@ -80,6 +80,7 @@ def _extract_chunk_text(content) -> str:
 
 
 async def generate_chat_stream(user_message: str, user_role: str):
+    
     system_prompt = get_system_prompt(version=PROMPT_VERSION, user_role=user_role)
 
     try:
@@ -95,7 +96,7 @@ async def generate_chat_stream(user_message: str, user_role: str):
             HumanMessage(content=user_message),
         ]
 
-       
+        # first pass , gathers parameters 
         ai_message_chunk = None
         async for chunk in llm_with_tools.astream(messages):
             if ai_message_chunk is None:
@@ -103,11 +104,12 @@ async def generate_chat_stream(user_message: str, user_role: str):
             else:
                 ai_message_chunk += chunk
 
-           
+            # stream direct text response chunks if no tool calls 
             text_token = _extract_chunk_text(chunk.content)
             if text_token and not chunk.tool_calls:
                 yield f"data: {text_token}\n\n"
-    
+
+        # check if model requested any tool 
         if ai_message_chunk and ai_message_chunk.tool_calls:
             messages.append(ai_message_chunk)
 
@@ -119,7 +121,7 @@ async def generate_chat_stream(user_message: str, user_role: str):
                     tool_args = tool_call.get("args", {})
                     logger.info("Executing tool '%s' with args: %s", t_name, tool_args)
                     
-                    
+                    # execute tool asynchronously if available, fallback to sync invoke
                     if hasattr(selected_tool, "ainvoke"):
                         tool_output = await selected_tool.ainvoke(tool_args)
                     else:
@@ -133,7 +135,7 @@ async def generate_chat_stream(user_message: str, user_role: str):
                         ToolMessage(content=f"Tool '{t_name}' not found.", tool_call_id=tool_call["id"])
                     )
 
-           
+            # second pass , final synthesis , feed tool results back to llm to prepare a response 
             async for chunk in llm_with_tools.astream(messages):
                 text_token = _extract_chunk_text(chunk.content)
                 if text_token:
@@ -152,19 +154,8 @@ async def generate_chat_stream(user_message: str, user_role: str):
         else:
             yield f"data: Error: Chatbot error: {err_msg}\n\n"
 
-def run_chatbot_agent(user_message: str, user_role: str) -> str:
-    """Helper function for non-streaming query execution."""
-    tokens = list(generate_chat_stream(user_message, user_role))
-    return "".join(tokens)
-
-
 @router.post(
     "/query",
-    status_code=status.HTTP_200_OK,
-    summary="Query the AI Chatbot (Streaming Response)",
-)
-@router.post(
-    "/query-stream",
     status_code=status.HTTP_200_OK,
     summary="Query the AI Chatbot (Streaming Response)",
 )
