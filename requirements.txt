@@ -6,3 +6,4 @@ python-dotenv
 alembic
 langchain
 langchain-google-genai
+bcrypt

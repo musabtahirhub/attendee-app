@@ -2,14 +2,17 @@ import time
 from pathlib import Path
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from typing import Annotated
+from fastapi import FastAPI, Request, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
+from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.database import engine, Base
-from app.models import Employee, AttendanceRecord, LeaveRequest
+from app.database import engine, Base, get_db
+from app.models import User, Employee, AttendanceRecord, LeaveRequest
+from app.auth import hash_password, get_current_user
 from app.routers import employees, attendance, chatbot
 from app.logger import get_logger
 
@@ -131,6 +134,28 @@ app.include_router(
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+@app.post("/register", tags=["Authentication"], status_code=status.HTTP_201_CREATED)
+def register(username: str, password: str, db: Session = Depends(get_db)):
+    """User Registration Route (Saves hashed password to DB)."""
+    existing_user = db.query(User).filter(User.username == username.strip()).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already registered",
+        )
+    hashed = hash_password(password)
+    new_user = User(username=username.strip(), hashed_password=hashed)
+    db.add(new_user)
+    db.commit()
+    return {"message": f"User '{username}' created successfully."}
+
+
+@app.post("/chat", tags=["Protected"])
+def chat(prompt: str, current_user: Annotated[str, Depends(get_current_user)]):
+    """Protected Chat Route requiring HTTP Basic Authentication."""
+    return {"user": current_user, "reply": f"Processing prompt: '{prompt}'"}
 
 
 @app.get("/api/health", tags=["Health"])
